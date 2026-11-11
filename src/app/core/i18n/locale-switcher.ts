@@ -14,11 +14,14 @@ import { TranslatePipe } from './translate.pipe';
     <button
       type="button"
       [cdkMenuTriggerFor]="menu"
-      [attr.aria-label]="'locale.trigger' | t: { name: currentName() }"
       class="inline-flex h-10 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white dark:focus-visible:ring-blue-400"
     >
       <app-icon name="language" />
-      <span aria-hidden="true">{{ currentShort() }}</span>
+      <!-- Name = "Language: EN (English)": contains the visible "EN" (WCAG 2.5.3 Label in Name)
+           so voice-control users can say what they see. -->
+      <span class="sr-only">{{ 'locale.label' | t }}:</span>
+      {{ currentShort() }}
+      <span class="sr-only">({{ currentName() }})</span>
     </button>
 
     <ng-template #menu>

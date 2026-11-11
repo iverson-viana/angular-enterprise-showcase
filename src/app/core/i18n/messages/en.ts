@@ -19,7 +19,6 @@ export const en = {
   },
   locale: {
     label: 'Language',
-    trigger: 'Language: {name}',
   },
   pages: {
     signIn: 'Sign in',

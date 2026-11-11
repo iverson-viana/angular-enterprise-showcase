@@ -17,7 +17,6 @@ export const ptBR: Messages = {
   },
   locale: {
     label: 'Idioma',
-    trigger: 'Idioma: {name}',
   },
   pages: {
     signIn: 'Entrar',
