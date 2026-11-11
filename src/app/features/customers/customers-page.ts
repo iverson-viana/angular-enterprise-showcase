@@ -62,7 +62,8 @@ export class CustomersPage {
   private readonly auth = inject(AuthService);
 
   /** Analysts can browse customers; only admins onboard new ones (also enforced by route + API). */
-  protected readonly canCreate = computed(() => this.auth.user()?.role === 'admin');
+  protected readonly canManage = computed(() => this.auth.user()?.role === 'admin');
+  protected readonly columnCount = computed(() => (this.canManage() ? 8 : 7));
 
   /** The URL is the single source of truth for the list state. */
   private readonly queryParams = toSignal(this.route.queryParams, {

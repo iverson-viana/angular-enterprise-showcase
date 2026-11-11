@@ -5,12 +5,12 @@ import { provideRouter, Router } from '@angular/router';
 import type { MockInstance } from 'vitest';
 
 import { ToastService } from '../../../core/notifications/toast.service';
-import { toCreateRequest } from './new-customer.models';
-import { NAME_AVAILABILITY_API } from './new-customer.schema';
-import { validDraft } from './new-customer.testing';
-import { CUSTOMERS_API, NewCustomerPage } from './new-customer-page';
+import { toCustomerInput } from './customer-form.models';
+import { NAME_AVAILABILITY_API } from './customer-form.schema';
+import { validDraft } from './customer-form.testing';
+import { CUSTOMERS_API, CustomerFormPage } from './customer-form-page';
 
-describe('NewCustomerPage', () => {
+describe('CustomerFormPage', () => {
   let http: HttpTestingController;
   let navigate: MockInstance<Router['navigate']>;
 
@@ -29,10 +29,16 @@ describe('NewCustomerPage', () => {
     document.body.replaceChildren();
   });
 
-  async function render() {
-    const fixture = TestBed.createComponent(NewCustomerPage);
+  /** With an id, renders edit mode and leaves the details request pending for the test. */
+  async function render(id?: string) {
+    const fixture = TestBed.createComponent(CustomerFormPage);
     document.body.append(fixture.nativeElement);
-    await fixture.whenStable();
+    if (id) {
+      fixture.componentRef.setInput('id', id);
+      fixture.detectChanges(); // no whenStable: it waits for the pending httpResource
+    } else {
+      await fixture.whenStable();
+    }
     const el = fixture.nativeElement as HTMLElement;
 
     const query = <T extends Element = HTMLInputElement>(selector: string) => {
@@ -123,7 +129,7 @@ describe('NewCustomerPage', () => {
     await submit();
 
     const req = createRequest();
-    expect(req.request.body).toEqual(toCreateRequest(validDraft()));
+    expect(req.request.body).toEqual(toCustomerInput(validDraft()));
     req.flush({ id: 'C-12001', name: 'Quarrytide Holdings S.A.' }, { status: 201, statusText: '' });
     await fixture.whenStable();
 
@@ -163,6 +169,52 @@ describe('NewCustomerPage', () => {
     await click('[aria-label="Remove signatory 2"]');
     expect(el.querySelector('#signatory-1-name')).toBeNull();
     expect(document.activeElement?.textContent).toContain('Add signatory');
+  });
+
+  describe('edit mode', () => {
+    const details = () => ({ id: 'C-10042', ...toCustomerInput(validDraft()) });
+    const loadRequest = () => http.expectOne(`${CUSTOMERS_API}/C-10042`);
+
+    it('shows a loading state, then the form filled with the saved data', async () => {
+      const { fixture, el, query } = await render('C-10042');
+      expect(el.querySelector('[aria-busy="true"]')?.textContent).toContain('Loading customer');
+      expect(el.querySelector('form')).toBeNull();
+
+      loadRequest().flush(details());
+      await fixture.whenStable();
+
+      expect(el.querySelector('h1')?.textContent).toContain('Edit customer');
+      expect(query('#legal-name').value).toBe('Quarrytide Holdings S.A.');
+      expect(query('#tax-id').value).toBe('12.ABC.345/01DE-35');
+      expect(query('#monthly-volume').value).toBe('250,000');
+      expect(fixture.componentInstance.hasUnsavedChanges()).toBe(false);
+    });
+
+    it('saves with PUT and returns to the list', async () => {
+      const { fixture, type, submit } = await render('C-10042');
+      loadRequest().flush(details());
+      await fixture.whenStable();
+
+      await type('#credit-limit', '600000');
+      await submit();
+
+      const req = http.expectOne((r) => r.method === 'PUT' && r.url === `${CUSTOMERS_API}/C-10042`);
+      expect(req.request.body).toMatchObject({ creditLimit: 600_000 });
+      req.flush({ id: 'C-10042', name: 'Quarrytide Holdings S.A.' });
+      await vi.waitFor(() => expect(navigate).toHaveBeenCalled());
+
+      expect(navigate).toHaveBeenCalledWith(['/customers'], { queryParams: { q: 'C-10042' } });
+      expect(TestBed.inject(ToastService).toasts()[0].message).toContain('was updated');
+    });
+
+    it('explains when the customer does not exist', async () => {
+      const { fixture, el } = await render('C-10042');
+      loadRequest().flush({ message: 'Not found' }, { status: 404, statusText: 'Not Found' });
+      await fixture.whenStable();
+
+      expect(el.querySelector('[role="alert"]')?.textContent).toContain("doesn't exist");
+      expect(el.querySelector('form')).toBeNull();
+    });
   });
 
   it('tracks unsaved changes for the leave-page guard', async () => {

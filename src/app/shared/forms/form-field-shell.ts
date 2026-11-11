@@ -26,12 +26,13 @@ import { Icon } from '../ui/icon';
         <span class="font-normal text-slate-600 dark:text-slate-400">(optional)</span>
       }
     </label>
+    <div class="mt-1"><ng-content /></div>
+    <!-- Below the control, so controls side by side line up whether or not they have a hint. -->
     @if (hint()) {
-      <p [id]="hintId()" class="mt-0.5 text-sm text-slate-600 dark:text-slate-400">
+      <p [id]="hintId()" class="mt-1 text-sm text-slate-600 dark:text-slate-400">
         {{ hint() }}
       </p>
     }
-    <div class="mt-1"><ng-content /></div>
     <!-- Always rendered so async status changes are announced. -->
     <p aria-live="polite" class="text-sm text-slate-600 empty:hidden dark:text-slate-400">
       @if (state().pending()) {

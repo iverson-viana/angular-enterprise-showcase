@@ -1,0 +1,420 @@
+<header>
+  <nav aria-label="Breadcrumb" class="text-sm">
+    <ol class="flex items-center gap-1 text-slate-600 dark:text-slate-400">
+      <li>
+        <a
+          routerLink="/customers"
+          class="rounded font-medium text-blue-700 underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:text-blue-400 dark:focus-visible:ring-blue-400"
+          >Customers</a
+        >
+      </li>
+      <li aria-hidden="true"><app-icon name="chevronRight" class="size-4" /></li>
+      <li aria-current="page">{{ isEdit() ? 'Edit customer' : 'New customer' }}</li>
+    </ol>
+  </nav>
+  <h1 class="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
+    {{ isEdit() ? 'Edit customer' : 'New customer' }}
+  </h1>
+  <p class="mt-1 text-slate-600 dark:text-slate-300">
+    @if (details(); as saved) {
+      {{ saved.legalName }} · {{ saved.id }}.
+    } @else if (!isEdit()) {
+      Onboard a business client.
+    }
+    Every field is required unless marked optional.
+  </p>
+</header>
+
+@if (isEdit() && loadFailed()) {
+  <div
+    role="alert"
+    class="mt-6 max-w-3xl rounded-lg border border-red-200 bg-red-50 p-5 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
+  >
+    @if (notFound()) {
+      <p class="font-medium">This customer doesn't exist.</p>
+      <a
+        routerLink="/customers"
+        class="mt-3 inline-block rounded font-medium underline underline-offset-2 hover:no-underline focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:outline-none"
+        >Back to customers</a
+      >
+    } @else {
+      <p class="font-medium">We couldn't load this customer.</p>
+      <button
+        type="button"
+        (click)="retryLoad()"
+        class="mt-3 rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-800 focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:ring-offset-2 focus-visible:outline-none dark:focus-visible:ring-offset-red-950"
+      >
+        Try again
+      </button>
+    }
+  </div>
+} @else if (isEdit() && !details()) {
+  <div aria-busy="true" class="mt-6 max-w-3xl space-y-6">
+    <span class="sr-only">Loading customer…</span>
+    @for (i of [1, 2, 3]; track i) {
+      <div
+        aria-hidden="true"
+        class="h-40 rounded-lg bg-slate-100 motion-safe:animate-pulse dark:bg-slate-800"
+      ></div>
+    }
+  </div>
+} @else {
+  <form [formRoot]="customerForm" class="mt-6 max-w-3xl space-y-6">
+    @if (summaryItems(); as items) {
+      @if (items.length > 0) {
+        <div
+          #summary
+          tabindex="-1"
+          role="region"
+          aria-labelledby="error-summary-title"
+          class="rounded-lg border-2 border-red-700 bg-red-50 p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:ring-offset-2 dark:border-red-400 dark:bg-red-950 dark:focus-visible:ring-red-400 dark:focus-visible:ring-offset-slate-950"
+        >
+          <h2 id="error-summary-title" class="font-semibold text-red-800 dark:text-red-200">
+            {{
+              items.length === 1
+                ? 'There is 1 problem with this form'
+                : 'There are ' + items.length + ' problems with this form'
+            }}
+          </h2>
+          <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-red-800 dark:text-red-200">
+            @for (item of items; track $index) {
+              <li>
+                <button
+                  type="button"
+                  class="rounded text-left underline underline-offset-2 hover:no-underline focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:outline-none dark:focus-visible:ring-red-400"
+                  (click)="focusField(item.error)"
+                >
+                  {{ item.text }}
+                </button>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    }
+
+    <!-- ── Company ─────────────────────────────────────────────────────────── -->
+    <fieldset
+      class="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+    >
+      <legend class="px-1 text-base font-semibold text-slate-900 dark:text-white">Company</legend>
+      <div class="grid gap-5 sm:grid-cols-2">
+        <app-form-field
+          #fLegalName
+          class="sm:col-span-2"
+          label="Legal name"
+          controlId="legal-name"
+          hint="As registered with the authorities."
+          pendingLabel="Checking that this company isn't a customer already…"
+          [field]="customerForm.company.legalName"
+        >
+          <input
+            id="legal-name"
+            type="text"
+            autocomplete="organization"
+            class="ui-input"
+            [formField]="customerForm.company.legalName"
+            [attr.aria-describedby]="fLegalName.describedBy()"
+            [attr.aria-invalid]="fLegalName.showError()"
+          />
+        </app-form-field>
+
+        <app-form-field
+          #fSegment
+          label="Segment"
+          controlId="segment"
+          [field]="customerForm.company.segment"
+        >
+          <select
+            id="segment"
+            class="ui-input"
+            [formField]="customerForm.company.segment"
+            [attr.aria-describedby]="fSegment.describedBy()"
+            [attr.aria-invalid]="fSegment.showError()"
+          >
+            <option value="">Choose a segment</option>
+            @for (option of segmentOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </app-form-field>
+
+        <app-form-field
+          #fCountry
+          label="Country"
+          controlId="country"
+          hint="Where the company is incorporated."
+          [field]="customerForm.company.country"
+        >
+          <select
+            id="country"
+            class="ui-input"
+            [formField]="customerForm.company.country"
+            [attr.aria-describedby]="fCountry.describedBy()"
+            [attr.aria-invalid]="fCountry.showError()"
+            (change)="onCountryChange()"
+          >
+            <option value="">Choose a country</option>
+            @for (option of countryOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </app-form-field>
+
+        <app-form-field
+          #fTaxId
+          class="sm:col-span-2"
+          controlId="tax-id"
+          [label]="taxIdRule()?.label ?? 'Tax ID'"
+          [hint]="taxIdHint()"
+          [field]="customerForm.company.taxId"
+        >
+          <app-masked-input
+            inputId="tax-id"
+            [formField]="customerForm.company.taxId"
+            [mask]="taxIdMask()"
+            [describedBy]="fTaxId.describedBy()"
+          />
+        </app-form-field>
+      </div>
+    </fieldset>
+
+    <!-- ── Bank account ────────────────────────────────────────────────────── -->
+    <fieldset
+      class="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+    >
+      <legend class="px-1 text-base font-semibold text-slate-900 dark:text-white">
+        Settlement account
+      </legend>
+      <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
+        Must be held in the company's country.
+      </p>
+      @if (!customerForm.banking.iban().hidden()) {
+        <app-form-field
+          #fIban
+          label="IBAN"
+          controlId="iban"
+          [hint]="ibanHint()"
+          [field]="customerForm.banking.iban"
+        >
+          <app-masked-input
+            inputId="iban"
+            [formField]="customerForm.banking.iban"
+            [mask]="ibanMask"
+            [describedBy]="fIban.describedBy()"
+          />
+        </app-form-field>
+      } @else {
+        <div class="grid gap-5 sm:grid-cols-2">
+          <app-form-field
+            #fRouting
+            label="Routing number (ABA)"
+            controlId="routing-number"
+            hint="9 digits, for example 123456780."
+            [field]="customerForm.banking.routingNumber"
+          >
+            <app-masked-input
+              inputId="routing-number"
+              inputMode="numeric"
+              [formField]="customerForm.banking.routingNumber"
+              [mask]="routingMask"
+              [describedBy]="fRouting.describedBy()"
+            />
+          </app-form-field>
+          <app-form-field
+            #fAccount
+            label="Account number"
+            controlId="account-number"
+            hint="4 to 17 digits."
+            [field]="customerForm.banking.accountNumber"
+          >
+            <app-masked-input
+              inputId="account-number"
+              inputMode="numeric"
+              [formField]="customerForm.banking.accountNumber"
+              [mask]="accountMask"
+              [describedBy]="fAccount.describedBy()"
+            />
+          </app-form-field>
+        </div>
+      }
+    </fieldset>
+
+    <!-- ── Limits ──────────────────────────────────────────────────────────── -->
+    <fieldset
+      class="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+    >
+      <legend class="px-1 text-base font-semibold text-slate-900 dark:text-white">Limits</legend>
+      <div class="grid gap-5 sm:grid-cols-2">
+        <app-form-field
+          #fVolume
+          label="Expected monthly volume"
+          controlId="monthly-volume"
+          [hint]="volumeHint"
+          [field]="customerForm.banking.monthlyVolume"
+        >
+          <app-amount-input
+            inputId="monthly-volume"
+            [formField]="customerForm.banking.monthlyVolume"
+            [describedBy]="fVolume.describedBy()"
+          />
+        </app-form-field>
+        <app-form-field
+          #fCredit
+          label="Credit limit"
+          controlId="credit-limit"
+          [optional]="true"
+          [hint]="creditHint()"
+          [field]="customerForm.banking.creditLimit"
+        >
+          <app-amount-input
+            inputId="credit-limit"
+            [formField]="customerForm.banking.creditLimit"
+            [describedBy]="fCredit.describedBy()"
+          />
+        </app-form-field>
+      </div>
+    </fieldset>
+
+    <!-- ── Signatories ─────────────────────────────────────────────────────── -->
+    <fieldset
+      class="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+    >
+      <legend class="px-1 text-base font-semibold text-slate-900 dark:text-white">
+        Authorized signatories
+      </legend>
+      <p class="text-sm text-slate-600 dark:text-slate-400">
+        People who can approve payments, up to {{ maxSignatories }}.
+      </p>
+
+      <ol class="mt-4 space-y-4">
+        @for (signatory of customerForm.signatories; track signatory; let i = $index) {
+          <li>
+            <fieldset class="rounded-md border border-slate-200 p-4 dark:border-slate-700">
+              <legend class="px-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+                Signatory {{ i + 1 }}
+              </legend>
+              <div class="grid items-start gap-4 sm:grid-cols-[1fr_1fr_auto]">
+                <app-form-field
+                  #fName
+                  label="Full name"
+                  [controlId]="'signatory-' + i + '-name'"
+                  [field]="signatory.name"
+                >
+                  <input
+                    type="text"
+                    autocomplete="off"
+                    class="ui-input"
+                    [id]="'signatory-' + i + '-name'"
+                    [formField]="signatory.name"
+                    [attr.aria-describedby]="fName.describedBy()"
+                    [attr.aria-invalid]="fName.showError()"
+                  />
+                </app-form-field>
+                <app-form-field
+                  #fEmail
+                  label="Email"
+                  [controlId]="'signatory-' + i + '-email'"
+                  [field]="signatory.email"
+                >
+                  <input
+                    type="email"
+                    autocomplete="off"
+                    class="ui-input"
+                    [id]="'signatory-' + i + '-email'"
+                    [formField]="signatory.email"
+                    [attr.aria-describedby]="fEmail.describedBy()"
+                    [attr.aria-invalid]="fEmail.showError()"
+                  />
+                </app-form-field>
+                @if (model().signatories.length > 1) {
+                  <button
+                    type="button"
+                    class="inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:outline-none sm:mt-6 dark:text-red-400 dark:hover:bg-slate-800 dark:focus-visible:ring-red-400"
+                    [attr.aria-label]="'Remove signatory ' + (i + 1)"
+                    (click)="removeSignatory(i)"
+                  >
+                    <app-icon name="trash" class="size-4" />
+                    <span aria-hidden="true">Remove</span>
+                  </button>
+                }
+              </div>
+            </fieldset>
+          </li>
+        }
+      </ol>
+
+      <button
+        #addSignatoryButton
+        type="button"
+        class="mt-4 inline-flex items-center gap-1.5 rounded-md border border-slate-500 px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus-visible:ring-blue-400"
+        [disabled]="model().signatories.length >= maxSignatories"
+        (click)="addSignatory()"
+      >
+        <app-icon name="plus" class="size-4" />
+        Add signatory
+      </button>
+    </fieldset>
+
+    <!-- ── Compliance ──────────────────────────────────────────────────────── -->
+    @let kyc = customerForm.kycConfirmed();
+    @let kycError = kyc.touched() && kyc.invalid();
+    <div>
+      <div class="flex items-start gap-3">
+        <input
+          id="kyc"
+          type="checkbox"
+          class="mt-0.5 size-5 shrink-0 accent-blue-700 dark:accent-blue-400"
+          [formField]="customerForm.kycConfirmed"
+          [attr.aria-invalid]="kycError"
+          [attr.aria-describedby]="kycError ? 'kyc-error' : null"
+        />
+        <label for="kyc" class="text-sm text-slate-800 dark:text-slate-200">
+          I confirm the KYC documents (incorporation, ownership structure and signatory IDs) were
+          verified.
+        </label>
+      </div>
+      @if (kycError) {
+        <p
+          id="kyc-error"
+          class="mt-1 ml-8 flex items-start gap-1 text-sm text-red-700 dark:text-red-400"
+        >
+          <app-icon name="xCircle" class="mt-px size-4" />
+          <span>{{ kyc.errors()[0].message }}</span>
+        </p>
+      }
+    </div>
+
+    @if (serverError(); as message) {
+      <p
+        role="alert"
+        class="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
+      >
+        {{ message }}
+      </p>
+    }
+
+    <div
+      class="flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:justify-end dark:border-slate-800"
+    >
+      <a
+        routerLink="/customers"
+        class="rounded-md px-4 py-2 text-center font-medium text-slate-700 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:text-slate-300 dark:hover:bg-slate-800 dark:focus-visible:ring-blue-400"
+      >
+        Cancel
+      </a>
+      <button
+        type="submit"
+        class="rounded-md bg-blue-700 px-4 py-2 font-medium text-white hover:bg-blue-800 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950"
+        [disabled]="customerForm().submitting()"
+        [attr.aria-busy]="customerForm().submitting()"
+      >
+        @if (isEdit()) {
+          {{ customerForm().submitting() ? 'Saving…' : 'Save changes' }}
+        } @else {
+          {{ customerForm().submitting() ? 'Creating customer…' : 'Create customer' }}
+        }
+      </button>
+    </div>
+  </form>
+}

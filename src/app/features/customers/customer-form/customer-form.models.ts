@@ -2,9 +2,9 @@ import { type InputMask, patternMask } from '../../../shared/forms/input-mask';
 import { isValidCnpj, isValidDeVatId, isValidPtNif } from '../../../shared/validation/checksums';
 import type { Segment } from '../customers.models';
 
-/** Jurisdictions where onboarding is available (a subset of all customer countries). */
-export const ONBOARDING_COUNTRIES = ['US', 'GB', 'DE', 'BR', 'PT'] as const;
-export type OnboardingCountry = (typeof ONBOARDING_COUNTRIES)[number];
+/** Jurisdictions Ledgerly operates in. Single source for the form and the mock data. */
+export const CUSTOMER_COUNTRIES = ['US', 'GB', 'DE', 'BR', 'PT'] as const;
+export type CustomerCountry = (typeof CUSTOMER_COUNTRIES)[number];
 
 export interface TaxIdRule {
   label: string;
@@ -14,7 +14,7 @@ export interface TaxIdRule {
   isValid(clean: string): boolean;
 }
 
-export const TAX_ID_RULES: Record<OnboardingCountry, TaxIdRule> = {
+export const TAX_ID_RULES: Record<CustomerCountry, TaxIdRule> = {
   US: {
     label: 'EIN',
     mask: patternMask('00-0000000'),
@@ -48,11 +48,11 @@ export const TAX_ID_RULES: Record<OnboardingCountry, TaxIdRule> = {
 };
 
 /** IBAN everywhere except the US, which uses ABA routing + account number. */
-export const usesIban = (country: OnboardingCountry | ''): boolean => country !== 'US';
+export const usesIban = (country: CustomerCountry | ''): boolean => country !== 'US';
 
 export const IBAN_MASK = patternMask('AA00 **** **** **** **** **** **** ****');
 /** ISO 13616 documentation samples (not real accounts) for the hint, per country. */
-export const IBAN_EXAMPLES: Record<Exclude<OnboardingCountry, 'US'>, string> = {
+export const IBAN_EXAMPLES: Record<Exclude<CustomerCountry, 'US'>, string> = {
   GB: 'GB82WEST12345698765432',
   DE: 'DE89370400440532013000',
   BR: 'BR1800360305000010009795493C1',
@@ -70,17 +70,17 @@ export const MIN_MONTHLY_VOLUME = 10_000;
 export const CREDIT_TO_VOLUME_RATIO = 3;
 export const MAX_SIGNATORIES = 4;
 
-export interface SignatoryDraft {
+export interface Signatory {
   name: string;
   email: string;
 }
 
 /** Form model. Empty strings / nulls stand for "not filled in yet". */
-export interface NewCustomerDraft {
+export interface CustomerDraft {
   company: {
     legalName: string;
     segment: Segment | '';
-    country: OnboardingCountry | '';
+    country: CustomerCountry | '';
     taxId: string;
   };
   banking: {
@@ -90,13 +90,13 @@ export interface NewCustomerDraft {
     monthlyVolume: number | null;
     creditLimit: number | null;
   };
-  signatories: SignatoryDraft[];
+  signatories: Signatory[];
   kycConfirmed: boolean;
 }
 
-export const emptySignatory = (): SignatoryDraft => ({ name: '', email: '' });
+export const emptySignatory = (): Signatory => ({ name: '', email: '' });
 
-export const emptyNewCustomer = (): NewCustomerDraft => ({
+export const emptyCustomerDraft = (): CustomerDraft => ({
   company: { legalName: '', segment: '', country: '', taxId: '' },
   banking: {
     iban: '',
@@ -111,19 +111,24 @@ export const emptyNewCustomer = (): NewCustomerDraft => ({
 
 export type BankAccount = { iban: string } | { routingNumber: string; accountNumber: string };
 
-/** POST /api/customers body. */
-export interface CreateCustomerRequest {
+/** Body of POST /api/customers and PUT /api/customers/:id. */
+export interface CustomerInput {
   legalName: string;
   segment: Segment;
-  country: OnboardingCountry;
+  country: CustomerCountry;
   taxId: string;
   bankAccount: BankAccount;
   monthlyVolume: number;
   creditLimit: number;
-  signatories: SignatoryDraft[];
+  signatories: Signatory[];
 }
 
-/** 409/422 body: errors the server attaches to specific fields. */
+/** GET /api/customers/:id — the onboarding data behind a table row. */
+export interface CustomerDetails extends CustomerInput {
+  id: string;
+}
+
+/** 409 body: errors the server attaches to specific fields. */
 export interface FieldErrorsResponse {
   message: string;
   fieldErrors?: Partial<Record<'legalName' | 'taxId', string>>;
@@ -134,9 +139,9 @@ export interface NameAvailability {
 }
 
 /** Maps a valid draft to the API contract (call only after validation passed). */
-export function toCreateRequest(draft: NewCustomerDraft): CreateCustomerRequest {
+export function toCustomerInput(draft: CustomerDraft): CustomerInput {
   const { company, banking } = draft;
-  const country = company.country as OnboardingCountry;
+  const country = company.country as CustomerCountry;
   return {
     legalName: company.legalName.trim(),
     segment: company.segment as Segment,
@@ -148,5 +153,27 @@ export function toCreateRequest(draft: NewCustomerDraft): CreateCustomerRequest 
     monthlyVolume: banking.monthlyVolume ?? 0,
     creditLimit: banking.creditLimit ?? 0,
     signatories: draft.signatories.map((s) => ({ name: s.name.trim(), email: s.email.trim() })),
+  };
+}
+
+/** Loads saved data into the form. KYC was confirmed when the customer was onboarded. */
+export function toDraft(details: CustomerDetails): CustomerDraft {
+  const account = details.bankAccount;
+  return {
+    company: {
+      legalName: details.legalName,
+      segment: details.segment,
+      country: details.country,
+      taxId: details.taxId,
+    },
+    banking: {
+      iban: 'iban' in account ? account.iban : '',
+      routingNumber: 'routingNumber' in account ? account.routingNumber : '',
+      accountNumber: 'accountNumber' in account ? account.accountNumber : '',
+      monthlyVolume: details.monthlyVolume,
+      creditLimit: details.creditLimit,
+    },
+    signatories: details.signatories.map((s) => ({ ...s })),
+    kycConfirmed: true,
   };
 }

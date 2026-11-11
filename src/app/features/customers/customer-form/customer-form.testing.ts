@@ -1,7 +1,7 @@
-import type { NewCustomerDraft } from './new-customer.models';
+import type { CustomerDraft } from './customer-form.models';
 
 /** A draft that passes every rule (Brazil, alphanumeric CNPJ). Invented data. */
-export const validDraft = (): NewCustomerDraft => ({
+export const validDraft = (): CustomerDraft => ({
   company: {
     legalName: 'Quarrytide Holdings S.A.',
     segment: 'corporate',

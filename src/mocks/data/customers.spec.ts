@@ -1,46 +1,43 @@
-import { DEFAULT_CUSTOMER_QUERY } from '../../app/features/customers/customer-query';
-import { CUSTOMER_COUNT, queryCustomers } from './customers';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { form } from '@angular/forms/signals';
 
-const query = (patch: Partial<typeof DEFAULT_CUSTOMER_QUERY> = {}) =>
-  queryCustomers({ ...DEFAULT_CUSTOMER_QUERY, ...patch });
+import { toDraft } from '../../app/features/customers/customer-form/customer-form.models';
+import { customerFormSchema } from '../../app/features/customers/customer-form/customer-form.schema';
+import { allCustomers, customerDetails, isCustomerNameTaken } from './customers';
 
-describe('queryCustomers (mock backend)', () => {
-  it('paginates the full set', () => {
-    const page = query({ page: 2, pageSize: 10 });
-    expect(page.total).toBe(CUSTOMER_COUNT);
-    expect(page.items).toHaveLength(10);
-    expect(page.page).toBe(2);
+describe('mock customer details', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
   });
 
-  it('filters by every dimension at once', () => {
-    const page = query({ segment: 'sme', risk: 'high', status: 'active', pageSize: 100 });
-    expect(page.total).toBeGreaterThan(0);
-    expect(page.total).toBeLessThan(CUSTOMER_COUNT);
-    for (const c of page.items) {
-      expect([c.segment, c.risk, c.status]).toEqual(['sme', 'high', 'active']);
+  it('generates onboarding data that passes the form rules, so any row can be edited', () => {
+    for (const customer of allCustomers().slice(0, 300)) {
+      const details = customerDetails(customer.id)!;
+      const tree = TestBed.runInInjectionContext(() =>
+        form(signal(toDraft(details)), customerFormSchema()),
+      );
+      const problems = tree()
+        .errorSummary()
+        .map((e) => e.message);
+      expect(problems, `${customer.id} (${customer.country})`).toEqual([]);
     }
   });
 
-  it('searches by name or ID, case-insensitively', () => {
-    expect(query({ q: 'c-10001' }).items.map((c) => c.id)).toEqual(['C-10001']);
-    const byName = query({ q: 'QUILLON', pageSize: 100 });
-    expect(byName.items.every((c) => c.name.toLowerCase().includes('quillon'))).toBe(true);
+  it('is deterministic per customer', () => {
+    const id = allCustomers()[0].id;
+    expect(customerDetails(id)).toEqual(customerDetails(id));
   });
 
-  it('sorts in both directions', () => {
-    const desc = query({ sort: 'balance', dir: 'desc', pageSize: 100 }).items.map((c) => c.balance);
-    expect(desc).toEqual([...desc].sort((a, b) => b - a));
-    const asc = query({ sort: 'lastActivity', dir: 'asc', pageSize: 100 }).items;
-    expect(asc.map((c) => c.lastActivity)).toEqual(asc.map((c) => c.lastActivity).sort());
-  });
-
-  it('clamps an out-of-range page to the last one', () => {
-    const page = query({ page: 9999, pageSize: 100 });
-    expect(page.page).toBe(CUSTOMER_COUNT / 100);
-    expect(page.items).toHaveLength(100);
-  });
-
-  it('returns an empty first page when nothing matches', () => {
-    expect(query({ q: 'no such customer' })).toMatchObject({ items: [], total: 0, page: 1 });
+  it('lets a customer keep its own name', () => {
+    const { id, name } = allCustomers()[0];
+    expect(isCustomerNameTaken(name)).toBe(true);
+    expect(isCustomerNameTaken(name.toUpperCase(), id)).toBe(
+      allCustomers().filter((c) => c.name === name).length > 1,
+    );
   });
 });

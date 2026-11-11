@@ -1,5 +1,5 @@
 import { DOCUMENT } from '@angular/common';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, httpResource } from '@angular/common/http';
 import {
   afterNextRender,
   Component,
@@ -7,6 +7,8 @@ import {
   type ElementRef,
   inject,
   Injector,
+  input,
+  linkedSignal,
   signal,
   viewChild,
 } from '@angular/core';
@@ -31,49 +33,85 @@ import { type Customer, SEGMENT_LABELS, SEGMENTS } from '../customers.models';
 import {
   ACCOUNT_MASK,
   CREDIT_TO_VOLUME_RATIO,
+  CUSTOMER_COUNTRIES,
+  type CustomerDetails,
+  type CustomerDraft,
   EMPTY_MASK,
-  emptyNewCustomer,
+  emptyCustomerDraft,
   emptySignatory,
   type FieldErrorsResponse,
   IBAN_EXAMPLES,
   IBAN_MASK,
   MAX_SIGNATORIES,
   MIN_MONTHLY_VOLUME,
-  ONBOARDING_COUNTRIES,
   ROUTING_MASK,
   TAX_ID_RULES,
-  toCreateRequest,
-} from './new-customer.models';
-import { newCustomerSchema } from './new-customer.schema';
+  toCustomerInput,
+  toDraft,
+} from './customer-form.models';
+import { customerFormSchema } from './customer-form.schema';
 
 export const CUSTOMERS_API = '/api/customers';
 
+/**
+ * Create (`/customers/new`) and edit (`/customers/:id/edit`) share this page: same fields,
+ * same rules. In edit mode the saved data is loaded first and the saved name is exempt
+ * from the availability check.
+ */
 @Component({
-  selector: 'app-new-customer-page',
+  selector: 'app-customer-form-page',
   imports: [FormRoot, FormField, FormFieldShell, MaskedInput, AmountInput, Icon, RouterLink],
-  templateUrl: './new-customer-page.html',
+  templateUrl: './customer-form-page.html',
 })
-export class NewCustomerPage implements HasUnsavedChanges {
+export class CustomerFormPage implements HasUnsavedChanges {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly toasts = inject(ToastService);
   private readonly injector = inject(Injector);
   private readonly document = inject(DOCUMENT);
 
-  protected readonly model = signal(emptyNewCustomer());
-  protected readonly customerForm = form(this.model, newCustomerSchema, {
-    name: 'new-customer',
-    submission: {
-      action: () => this.create(),
-      onInvalid: () => this.revealErrorSummary(),
-    },
+  /** Route param (withComponentInputBinding); absent when creating. */
+  readonly id = input<string>();
+  protected readonly isEdit = computed(() => this.id() !== undefined);
+
+  private readonly detailsResource = httpResource<CustomerDetails>(() => {
+    const id = this.id();
+    return id ? `${CUSTOMERS_API}/${encodeURIComponent(id)}` : undefined;
   });
+  protected readonly details = computed(() =>
+    this.detailsResource.hasValue() ? this.detailsResource.value() : undefined,
+  );
+  protected readonly loadFailed = computed(() => this.detailsResource.error() !== undefined);
+  protected readonly notFound = computed(() => {
+    const error = this.detailsResource.error();
+    return error instanceof HttpErrorResponse && error.status === 404;
+  });
+
+  /** Empty when creating; replaced by the saved data once it loads — and freely editable. */
+  protected readonly model = linkedSignal<CustomerDraft>(() => {
+    const details = this.details();
+    return details ? toDraft(details) : emptyCustomerDraft();
+  });
+  protected readonly customerForm = form(
+    this.model,
+    customerFormSchema({
+      customerId: () => this.id(),
+      originalLegalName: () => this.details()?.legalName,
+    }),
+    {
+      name: 'customer',
+      submission: {
+        action: () => this.save(),
+        onInvalid: () => this.revealErrorSummary(),
+      },
+    },
+  );
 
   protected readonly segmentOptions = SEGMENTS.map((value) => ({
     value,
     label: SEGMENT_LABELS[value],
   }));
-  protected readonly countryOptions = ONBOARDING_COUNTRIES.map((value) => ({
+  protected readonly countryOptions = CUSTOMER_COUNTRIES.map((value) => ({
     value,
     label: countryName(value),
   }));
@@ -115,7 +153,7 @@ export class NewCustomerPage implements HasUnsavedChanges {
   );
   private readonly summary = viewChild<ElementRef<HTMLElement>>('summary');
   private readonly addSignatoryButton =
-    viewChild.required<ElementRef<HTMLButtonElement>>('addSignatoryButton');
+    viewChild<ElementRef<HTMLButtonElement>>('addSignatoryButton');
 
   /** Unexpected server failure, shown inline above the actions. */
   protected readonly serverError = signal<string | null>(null);
@@ -123,6 +161,10 @@ export class NewCustomerPage implements HasUnsavedChanges {
 
   hasUnsavedChanges(): boolean {
     return !this.saved && this.customerForm().dirty();
+  }
+
+  protected retryLoad(): void {
+    this.detailsResource.reload();
   }
 
   /** A tax ID typed for one country is meaningless for another: start over. */
@@ -142,7 +184,7 @@ export class NewCustomerPage implements HasUnsavedChanges {
       signatories: m.signatories.filter((_, i) => i !== index),
     }));
     // The removed row took focus with it; land somewhere predictable.
-    this.afterRender(() => this.addSignatoryButton().nativeElement.focus());
+    this.afterRender(() => this.addSignatoryButton()?.nativeElement.focus());
   }
 
   protected focusField(error: ValidationError.WithFieldTree): void {
@@ -162,16 +204,22 @@ export class NewCustomerPage implements HasUnsavedChanges {
     this.afterRender(() => this.summary()?.nativeElement.focus());
   }
 
-  private async create(): Promise<TreeValidationResult> {
+  private async save(): Promise<TreeValidationResult> {
     this.serverError.set(null);
+    const id = this.id();
+    const body = toCustomerInput(this.model());
     try {
       const customer = await firstValueFrom(
-        this.http.post<Customer>(CUSTOMERS_API, toCreateRequest(this.model())),
+        id
+          ? this.http.put<Customer>(`${CUSTOMERS_API}/${encodeURIComponent(id)}`, body)
+          : this.http.post<Customer>(CUSTOMERS_API, body),
       );
       this.saved = true;
       this.toasts.show({
         tone: 'success',
-        message: `${customer.name} was created and is now in onboarding.`,
+        message: id
+          ? `${customer.name} was updated.`
+          : `${customer.name} was created and is now in onboarding.`,
       });
       await this.router.navigate(['/customers'], { queryParams: { q: customer.id } });
       return null;
@@ -189,7 +237,7 @@ export class NewCustomerPage implements HasUnsavedChanges {
       }
       // Network (0) and permission (403) failures are already announced by a global toast.
       if (error.status !== 0 && error.status !== 403) {
-        this.serverError.set("We couldn't create the customer. Please try again.");
+        this.serverError.set("We couldn't save the customer. Please try again.");
       }
       return null;
     }

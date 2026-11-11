@@ -3,6 +3,10 @@ import type { Routes } from '@angular/router';
 import { authGuard, guestGuard, roleGuard } from './core/auth/auth.guards';
 import { unsavedChangesGuard } from './core/navigation/unsaved-changes.guard';
 
+/** Create and edit share one lazy chunk. */
+const loadCustomerForm = () =>
+  import('./features/customers/customer-form/customer-form-page').then((m) => m.CustomerFormPage);
+
 export const routes: Routes = [
   {
     path: 'login',
@@ -26,10 +30,14 @@ export const routes: Routes = [
         title: 'New customer · Ledgerly',
         canActivate: [roleGuard('admin')],
         canDeactivate: [unsavedChangesGuard],
-        loadComponent: () =>
-          import('./features/customers/new-customer/new-customer-page').then(
-            (m) => m.NewCustomerPage,
-          ),
+        loadComponent: loadCustomerForm,
+      },
+      {
+        path: 'customers/:id/edit',
+        title: 'Edit customer · Ledgerly',
+        canActivate: [roleGuard('admin')],
+        canDeactivate: [unsavedChangesGuard],
+        loadComponent: loadCustomerForm,
       },
       {
         path: 'customers',

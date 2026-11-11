@@ -4,17 +4,20 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { form } from '@angular/forms/signals';
 
-import { emptyNewCustomer, type NewCustomerDraft } from './new-customer.models';
+import { type CustomerDraft, emptyCustomerDraft } from './customer-form.models';
 import {
+  customerFormSchema,
+  type CustomerSchemaOptions,
   NAME_AVAILABILITY_API,
   NAME_CHECK_DEBOUNCE_MS,
-  newCustomerSchema,
-} from './new-customer.schema';
-import { validDraft } from './new-customer.testing';
+} from './customer-form.schema';
+import { validDraft } from './customer-form.testing';
 
 const messages = (errors: readonly { message?: string }[]) => errors.map((e) => e.message);
+const waitForDebounce = () =>
+  new Promise((resolve) => setTimeout(resolve, NAME_CHECK_DEBOUNCE_MS + 50));
 
-describe('newCustomerSchema', () => {
+describe('customerFormSchema', () => {
   let http: HttpTestingController;
 
   beforeEach(() => {
@@ -24,14 +27,43 @@ describe('newCustomerSchema', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  function setup(draft: NewCustomerDraft) {
+  function setup(draft: CustomerDraft, options?: CustomerSchemaOptions) {
     const model = signal(draft);
-    const tree = TestBed.runInInjectionContext(() => form(model, newCustomerSchema));
+    const tree = TestBed.runInInjectionContext(() => form(model, customerFormSchema(options)));
     return { model, tree };
   }
 
+  describe('when editing', () => {
+    const editing: CustomerSchemaOptions = {
+      customerId: () => 'C-10042',
+      originalLegalName: () => 'Quarrytide Holdings S.A.',
+    };
+
+    it('does not check the saved name (generated data has look-alikes)', async () => {
+      const { tree } = setup(validDraft(), editing);
+      TestBed.tick();
+      await waitForDebounce();
+      TestBed.tick();
+
+      http.expectNone((r) => r.url === NAME_AVAILABILITY_API);
+      expect(tree.company.legalName().pending()).toBe(false);
+    });
+
+    it('checks a changed name, excluding the customer itself', async () => {
+      const { model } = setup(validDraft(), editing);
+      model.update((d) => ({ ...d, company: { ...d.company, legalName: 'Quarrytide Group' } }));
+      TestBed.tick();
+      await waitForDebounce();
+      TestBed.tick();
+
+      const req = http.expectOne((r) => r.url === NAME_AVAILABILITY_API);
+      expect(req.request.params.get('excludeId')).toBe('C-10042');
+      req.flush({ available: true });
+    });
+  });
+
   it('reports every missing field of an empty draft, but not the tax ID before a country', () => {
-    const { tree } = setup(emptyNewCustomer());
+    const { tree } = setup(emptyCustomerDraft());
 
     expect(messages(tree().errorSummary())).toEqual([
       'Enter the legal name.',
