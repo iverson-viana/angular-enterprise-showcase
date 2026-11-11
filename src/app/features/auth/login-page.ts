@@ -16,7 +16,7 @@ const safeRedirect = (url: string | undefined): string =>
   selector: 'app-login-page',
   imports: [FormField],
   templateUrl: './login-page.html',
-  host: { class: 'flex min-h-dvh items-center justify-center bg-slate-50 px-4 py-12' },
+  host: { class: 'flex min-h-dvh items-center justify-center px-4 py-12' },
 })
 export class LoginPage {
   private readonly auth = inject(AuthService);

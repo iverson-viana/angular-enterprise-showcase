@@ -2,9 +2,8 @@ import { delay, http, HttpResponse } from 'msw';
 
 import type { AuthResponse, LoginRequest, RefreshRequest } from '../../app/core/auth/auth.models';
 import { findUserById, MOCK_USERS, toPublicUser, type MockUserRecord } from '../data/users';
+import { authenticate, unauthorized } from '../authenticate';
 import { issueToken, verifyToken } from '../jwt';
-
-const unauthorized = (message: string) => HttpResponse.json({ message }, { status: 401 });
 
 function issueSession(user: MockUserRecord): AuthResponse {
   return {
@@ -34,9 +33,7 @@ export const authHandlers = [
 
   http.get('/api/auth/me', async ({ request }) => {
     await delay(150);
-    const token = request.headers.get('Authorization')?.replace(/^Bearer /, '');
-    const payload = verifyToken(token, 'access');
-    const user = payload && findUserById(payload.sub);
-    return user ? HttpResponse.json(toPublicUser(user)) : unauthorized('Access token expired');
+    const user = authenticate(request);
+    return user ? HttpResponse.json(toPublicUser(user)) : unauthorized();
   }),
 ];

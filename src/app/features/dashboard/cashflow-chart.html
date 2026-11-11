@@ -1,0 +1,184 @@
+<!-- Legend: always present for 2+ series (identity is never color-alone). -->
+<ul
+  class="mb-3 flex flex-wrap gap-4 text-sm text-slate-700 dark:text-slate-300"
+  aria-label="Legend"
+>
+  @for (s of series; track s.key) {
+    <li class="flex items-center gap-2">
+      <span aria-hidden="true" class="h-0.5 w-4 rounded-full" [class]="s.keyClass"></span>
+      {{ s.label }}
+    </li>
+  }
+</ul>
+
+@let g = geometry();
+<div
+  #plot
+  tabindex="0"
+  role="group"
+  aria-label="Cash flow by month. Use the left and right arrow keys to read each month."
+  class="relative rounded-md focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:focus-visible:ring-blue-400"
+  (pointermove)="onPointerMove($event)"
+  (pointerleave)="clearActive()"
+  (keydown)="onKeydown($event)"
+  (focus)="onFocus()"
+  (blur)="clearActive()"
+>
+  <svg
+    [attr.width]="g.width"
+    [attr.height]="height"
+    class="block overflow-visible"
+    aria-hidden="true"
+  >
+    <!-- Y grid + ticks (hairline, solid, recessive) -->
+    @for (tick of g.yTicks; track tick.label) {
+      <line
+        [attr.x1]="margin.left"
+        [attr.x2]="margin.left + g.innerWidth"
+        [attr.y1]="tick.y"
+        [attr.y2]="tick.y"
+        class="stroke-(--viz-grid)"
+        stroke-width="1"
+        shape-rendering="crispEdges"
+      />
+      <text
+        [attr.x]="margin.left - 8"
+        [attr.y]="tick.y"
+        text-anchor="end"
+        dominant-baseline="middle"
+        class="fill-slate-600 text-xs tabular-nums dark:fill-slate-400"
+      >
+        {{ tick.label }}
+      </text>
+    }
+
+    <!-- X labels -->
+    @for (tick of g.xTicks; track tick.x) {
+      <text
+        [attr.x]="tick.x"
+        [attr.y]="height - 8"
+        text-anchor="middle"
+        class="fill-slate-600 text-xs dark:fill-slate-400"
+      >
+        {{ tick.label }}
+      </text>
+    }
+
+    <!-- Crosshair -->
+    @if (active(); as a) {
+      <line
+        [attr.x1]="a.x"
+        [attr.x2]="a.x"
+        [attr.y1]="margin.top"
+        [attr.y2]="margin.top + g.innerHeight"
+        class="stroke-(--viz-axis)"
+        stroke-width="1"
+        shape-rendering="crispEdges"
+      />
+    }
+
+    <!-- Series lines (2px, round joins) -->
+    @for (line of g.lines; track line.key) {
+      <path
+        [attr.d]="line.path"
+        fill="none"
+        stroke-width="2"
+        stroke-linejoin="round"
+        stroke-linecap="round"
+        [class]="line.strokeClass"
+      />
+      <!-- End dot: r=4 with a 2px surface ring -->
+      <circle
+        [attr.cx]="g.endX"
+        [attr.cy]="line.endY"
+        r="4"
+        stroke-width="2"
+        class="stroke-(--viz-surface)"
+        [class]="line.fillClass"
+      />
+      @if (g.showEndLabels) {
+        <text
+          [attr.x]="g.endX + 10"
+          [attr.y]="line.endY"
+          dominant-baseline="middle"
+          class="fill-slate-700 text-xs font-medium dark:fill-slate-300"
+        >
+          {{ line.label }}
+        </text>
+      }
+    }
+
+    <!-- Active markers -->
+    @if (active(); as a) {
+      @for (row of a.rows; track row.key) {
+        <circle
+          [attr.cx]="a.x"
+          [attr.cy]="row.y"
+          r="4"
+          stroke-width="2"
+          class="stroke-(--viz-surface)"
+          [class]="row.fillClass"
+        />
+      }
+    }
+  </svg>
+
+  <!-- Tooltip: values lead, series names follow; line keys, not boxes. -->
+  @if (active(); as a) {
+    <div
+      aria-hidden="true"
+      class="pointer-events-none absolute top-2 z-10 min-w-44 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm shadow-lg dark:border-slate-700 dark:bg-slate-800"
+      [style.left.px]="a.x"
+      [class]="a.alignRight ? '-translate-x-[calc(100%+12px)]' : 'translate-x-3'"
+    >
+      <p class="text-xs text-slate-600 dark:text-slate-300">{{ a.month }}</p>
+      @for (row of a.rows; track row.key) {
+        <p class="mt-1 flex items-center gap-2">
+          <span class="h-0.5 w-3 rounded-full" [class]="row.keyClass"></span>
+          <span class="font-semibold text-slate-900 tabular-nums dark:text-white">{{
+            row.value
+          }}</span>
+          <span class="text-slate-600 dark:text-slate-300">{{ row.label }}</span>
+        </p>
+      }
+    </div>
+  }
+
+  <p class="sr-only" aria-live="polite">{{ liveText() }}</p>
+</div>
+
+<!-- Table view: every value is reachable without hovering. -->
+<details class="mt-4 text-sm">
+  <summary
+    class="cursor-pointer rounded font-medium text-blue-700 hover:text-blue-900 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:text-blue-400 dark:hover:text-blue-300"
+  >
+    View data table
+  </summary>
+  <div class="mt-3 overflow-x-auto">
+    <table class="w-full text-left">
+      <caption class="sr-only">
+        Monthly inflow, outflow and net cash flow
+      </caption>
+      <thead
+        class="border-b border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300"
+      >
+        <tr>
+          <th scope="col" class="py-2 pr-4 font-medium">Month</th>
+          <th scope="col" class="py-2 pr-4 text-right font-medium">Inflow</th>
+          <th scope="col" class="py-2 pr-4 text-right font-medium">Outflow</th>
+          <th scope="col" class="py-2 text-right font-medium">Net</th>
+        </tr>
+      </thead>
+      <tbody class="text-slate-800 tabular-nums dark:text-slate-200">
+        @for (row of tableRows(); track row.month) {
+          <tr class="border-b border-slate-100 last:border-0 dark:border-slate-800">
+            <th scope="row" class="py-2 pr-4 font-normal">{{ row.month }}</th>
+            <td class="py-2 pr-4 text-right">{{ row.inflow }}</td>
+            <td class="py-2 pr-4 text-right">{{ row.outflow }}</td>
+            <td class="py-2 text-right">{{ row.net }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</details>

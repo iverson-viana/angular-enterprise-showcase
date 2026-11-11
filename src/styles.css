@@ -1,1 +1,27 @@
 @import 'tailwindcss';
+
+/* Class-based dark mode, toggled on <html> by ThemeService. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    color-scheme: light;
+
+    /* Data-viz tokens — categorical slots validated (CVD + contrast) against the card surface. */
+    --viz-series-1: #2a78d6;
+    --viz-series-2: #eb6834;
+    --viz-surface: #ffffff;
+    --viz-grid: #e2e8f0;
+    --viz-axis: #94a3b8;
+  }
+
+  :root.dark {
+    color-scheme: dark;
+
+    --viz-series-1: #3987e5;
+    --viz-series-2: #d95926;
+    --viz-surface: #0f172a;
+    --viz-grid: #1e293b;
+    --viz-axis: #475569;
+  }
+}

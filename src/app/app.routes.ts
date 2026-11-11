@@ -2,6 +2,9 @@ import type { Routes } from '@angular/router';
 
 import { authGuard, guestGuard, roleGuard } from './core/auth/auth.guards';
 
+const comingSoon = () =>
+  import('./features/coming-soon/coming-soon-page').then((m) => m.ComingSoonPage);
+
 export const routes: Routes = [
   {
     path: 'login',
@@ -10,13 +13,9 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/login-page').then((m) => m.LoginPage),
   },
   {
-    path: 'forbidden',
-    title: 'Access denied · Ledgerly',
-    loadComponent: () => import('./features/errors/forbidden-page').then((m) => m.ForbiddenPage),
-  },
-  {
     path: '',
     canActivate: [authGuard],
+    loadComponent: () => import('./layout/shell').then((m) => m.Shell),
     children: [
       {
         path: '',
@@ -25,11 +24,30 @@ export const routes: Routes = [
           import('./features/dashboard/dashboard-page').then((m) => m.DashboardPage),
       },
       {
+        path: 'customers',
+        title: 'Customers · Ledgerly',
+        canActivate: [roleGuard('admin', 'analyst')],
+        data: { heading: 'Customers' },
+        loadComponent: comingSoon,
+      },
+      {
+        path: 'transactions',
+        title: 'Transactions · Ledgerly',
+        data: { heading: 'Transactions' },
+        loadComponent: comingSoon,
+      },
+      {
         path: 'settings',
         title: 'Settings · Ledgerly',
         canActivate: [roleGuard('admin')],
         loadComponent: () =>
           import('./features/settings/settings-page').then((m) => m.SettingsPage),
+      },
+      {
+        path: 'forbidden',
+        title: 'Access denied · Ledgerly',
+        loadComponent: () =>
+          import('./features/errors/forbidden-page').then((m) => m.ForbiddenPage),
       },
     ],
   },

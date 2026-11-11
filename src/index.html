@@ -2,12 +2,27 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>AngularEnterpriseShowcase</title>
+    <title>Ledgerly</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Ledgerly — B2B banking dashboard (Angular portfolio demo)." />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <script>
+      // Apply the theme before first paint to avoid a light flash in dark mode.
+      // Keep in sync with ThemeService (storage key + class name).
+      (function () {
+        var stored = null;
+        try {
+          stored = localStorage.getItem('ledgerly.theme');
+        } catch (e) {}
+        var dark =
+          stored === 'dark' ||
+          (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.classList.toggle('dark', dark);
+      })();
+    </script>
   </head>
-  <body>
+  <body class="bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
     <app-root></app-root>
   </body>
 </html>

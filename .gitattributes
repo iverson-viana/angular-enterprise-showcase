@@ -1,0 +1,10 @@
+# Always LF in the repo and the working tree (matches Prettier's endOfLine and Linux CI),
+# regardless of each contributor's core.autocrlf setting.
+* text=auto eol=lf
+
+# Binary assets
+*.ico binary
+*.png binary
+*.jpg binary
+*.gif binary
+*.woff2 binary
