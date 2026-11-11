@@ -9,7 +9,7 @@ A B2B banking dashboard built to show how I structure a production-grade Angular
 signals end to end, zoneless change detection, typed Signal Forms, runtime i18n,
 accessibility verified in CI, and a test pyramid that gates every deploy.
 
-**Live demo → [ledgerly.pages.dev](https://ledgerly.pages.dev)** · sign in with a demo role on the login page.
+**Live demo → [ledgerly-eda.pages.dev](https://ledgerly-eda.pages.dev)** · sign in with a demo role on the login page.
 
 ![Ledgerly demo: sign in, dashboard, customers, onboarding form with validation, language and theme switch](docs/demo.gif)
 
