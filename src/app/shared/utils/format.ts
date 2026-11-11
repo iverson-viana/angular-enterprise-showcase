@@ -46,6 +46,25 @@ export function formatSignedPercent(ratio: number): string {
   return signedPercent.format(ratio);
 }
 
+const currencyWithCents = new Intl.NumberFormat(LOCALE, {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+/** Signed money amount with cents: `+$1,234.50` / `−$1,234.50` (true minus sign). */
+export function formatSignedAmount(value: number, direction: 'in' | 'out'): string {
+  return `${direction === 'in' ? '+' : '−'}${currencyWithCents.format(Math.abs(value))}`;
+}
+
+const mediumDateTime = new Intl.DateTimeFormat(LOCALE, { dateStyle: 'medium', timeStyle: 'short' });
+
+/** ISO timestamp → `Nov 11, 2026, 2:05 PM` (viewer's time zone). */
+export function formatDateTime(isoTimestamp: string): string {
+  return mediumDateTime.format(new Date(isoTimestamp));
+}
+
 const mediumDate = new Intl.DateTimeFormat(LOCALE, { dateStyle: 'medium' });
 const regionNames = new Intl.DisplayNames(LOCALE, { type: 'region' });
 

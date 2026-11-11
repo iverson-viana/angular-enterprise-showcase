@@ -4,8 +4,14 @@ import { getResponse } from 'msw';
 import { authHandlers } from './handlers/auth.handlers';
 import { customersHandlers } from './handlers/customers.handlers';
 import { dashboardHandlers } from './handlers/dashboard.handlers';
+import { transactionsHandlers } from './handlers/transactions.handlers';
 
-export const handlers = [...authHandlers, ...dashboardHandlers, ...customersHandlers];
+export const handlers = [
+  ...authHandlers,
+  ...dashboardHandlers,
+  ...customersHandlers,
+  ...transactionsHandlers,
+];
 
 const API_PREFIX = '/api/';
 

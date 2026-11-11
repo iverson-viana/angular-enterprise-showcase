@@ -1,0 +1,196 @@
+@let f = filters();
+
+<header>
+  <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">Transactions</h1>
+  <p class="mt-1 text-slate-600 dark:text-slate-300">
+    All booked payments, newest first. Scroll to load more.
+  </p>
+</header>
+
+<form
+  role="search"
+  aria-label="Filter transactions"
+  class="mt-6 flex flex-wrap items-end gap-3"
+  (submit)="$event.preventDefault()"
+>
+  <div class="w-full sm:w-72">
+    <label for="tx-search" class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+      Search
+    </label>
+    <div class="relative mt-1">
+      <app-icon
+        name="search"
+        class="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-slate-500 dark:text-slate-400"
+      />
+      <input
+        id="tx-search"
+        type="search"
+        placeholder="Customer, reference or ID"
+        autocomplete="off"
+        [value]="searchText()"
+        (input)="onSearchInput($event)"
+        class="block w-full rounded-md border border-slate-300 bg-white py-2 pr-3 pl-8 text-sm text-slate-900 placeholder:text-slate-500 focus:border-blue-700 focus:ring-2 focus:ring-blue-700 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-400 dark:focus:border-blue-400 dark:focus:ring-blue-400"
+      />
+    </div>
+  </div>
+
+  @for (control of filterControls; track control.key) {
+    <div>
+      <label
+        [for]="'tx-filter-' + control.key"
+        class="block text-sm font-medium text-slate-700 dark:text-slate-300"
+      >
+        {{ control.label }}
+      </label>
+      <select
+        [id]="'tx-filter-' + control.key"
+        (change)="onFilterChange(control.key, $event)"
+        class="mt-1 block rounded-md border border-slate-300 bg-white py-2 pr-8 pl-3 text-sm text-slate-900 focus:border-blue-700 focus:ring-2 focus:ring-blue-700 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-400"
+      >
+        <option value="" [selected]="f[control.key] === null">All</option>
+        @for (option of control.options; track option.value) {
+          <option [value]="option.value" [selected]="f[control.key] === option.value">
+            {{ option.label }}
+          </option>
+        }
+      </select>
+    </div>
+  }
+
+  @if (hasActiveFilters()) {
+    <button
+      type="button"
+      (click)="clearFilters()"
+      class="rounded-md px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:text-blue-400 dark:hover:bg-slate-800 dark:focus-visible:ring-blue-400"
+    >
+      Clear filters
+    </button>
+  }
+</form>
+
+<div
+  class="mt-6 rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+>
+  <div class="overflow-x-auto">
+    <!--
+      Virtualized rows can't use <table>: off-screen rows don't exist in the DOM.
+      ARIA table roles + aria-rowcount/aria-rowindex let screen readers announce
+      the real position ("row 5,231 of 10,001").
+    -->
+    <div
+      role="table"
+      aria-label="Transactions"
+      [attr.aria-rowcount]="(store.total() ?? 0) + 1"
+      class="min-w-[52rem] text-sm"
+    >
+      <div role="rowgroup">
+        <div
+          role="row"
+          aria-rowindex="1"
+          class="grid grid-cols-[11rem_minmax(14rem,1fr)_6rem_8rem_10rem] items-center border-b border-slate-200 px-4 py-3 font-medium text-slate-600 dark:border-slate-800 dark:text-slate-300"
+        >
+          <span role="columnheader">Date</span>
+          <span role="columnheader">Customer · Reference</span>
+          <span role="columnheader">Method</span>
+          <span role="columnheader">Status</span>
+          <span role="columnheader" class="text-right">Amount</span>
+        </div>
+      </div>
+
+      @if (store.isEmptyLoading()) {
+        <div role="rowgroup" aria-hidden="true">
+          @for (i of skeletonRows; track i) {
+            <div class="flex h-14 items-center px-4">
+              <div
+                class="h-5 w-full rounded bg-slate-100 motion-safe:animate-pulse dark:bg-slate-800"
+              ></div>
+            </div>
+          }
+        </div>
+      } @else if (store.hasError() && store.items().length === 0) {
+        <div role="alert" class="px-4 py-12 text-center text-red-800 dark:text-red-200">
+          <p class="font-medium">We couldn't load transactions.</p>
+          <button
+            type="button"
+            (click)="store.loadMore()"
+            class="mt-3 rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-800 focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:ring-offset-2 focus-visible:outline-none dark:focus-visible:ring-offset-slate-900"
+          >
+            Try again
+          </button>
+        </div>
+      } @else if (store.total() === 0) {
+        <div class="px-4 py-12 text-center">
+          <p class="font-medium text-slate-900 dark:text-white">No transactions found</p>
+          <p class="mt-1 text-slate-600 dark:text-slate-300">
+            Try a different search or remove some filters.
+          </p>
+        </div>
+      } @else {
+        <!-- Focusable so keyboard users can scroll the feed. -->
+        <cdk-virtual-scroll-viewport
+          role="rowgroup"
+          tabindex="0"
+          [itemSize]="rowHeight"
+          minBufferPx="560"
+          maxBufferPx="1120"
+          class="h-[calc(100dvh-22rem)] min-h-80 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none focus-visible:ring-inset dark:focus-visible:ring-blue-400"
+        >
+          <div
+            *cdkVirtualFor="let tx of rows(); trackBy: trackById; let i = index"
+            role="row"
+            [attr.aria-rowindex]="i + 2"
+            class="grid h-14 grid-cols-[11rem_minmax(14rem,1fr)_6rem_8rem_10rem] items-center border-b border-slate-100 px-4 text-slate-800 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-800/50"
+          >
+            <span role="cell" class="whitespace-nowrap tabular-nums">{{ tx.bookedAtLabel }}</span>
+            <span role="cell" class="min-w-0 pr-4">
+              <span class="block truncate font-medium text-slate-900 dark:text-white">
+                {{ tx.customerName }}
+              </span>
+              <span class="block truncate text-xs text-slate-600 dark:text-slate-400">
+                {{ tx.reference }} · {{ tx.id }}
+              </span>
+            </span>
+            <span role="cell">{{ tx.methodLabel }}</span>
+            <span role="cell"
+              ><app-badge [tone]="tx.statusTone">{{ tx.statusLabel }}</app-badge></span
+            >
+            <span
+              role="cell"
+              class="text-right font-medium whitespace-nowrap tabular-nums"
+              [class]="
+                tx.type === 'credit'
+                  ? 'text-green-700 dark:text-green-400'
+                  : 'text-slate-900 dark:text-white'
+              "
+            >
+              <span class="sr-only">{{ tx.typeLabel }}:</span> {{ tx.amountLabel }}
+            </span>
+          </div>
+        </cdk-virtual-scroll-viewport>
+      }
+    </div>
+  </div>
+
+  <!-- Feed status -->
+  <div
+    class="flex min-h-12 flex-wrap items-center justify-between gap-2 border-t border-slate-200 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300"
+  >
+    <p aria-live="polite">{{ summary() }}</p>
+    @if (store.hasError() && store.items().length > 0) {
+      <p role="alert" class="flex items-center gap-2 text-red-700 dark:text-red-400">
+        Couldn't load more.
+        <button
+          type="button"
+          (click)="store.loadMore()"
+          class="rounded font-medium underline focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none"
+        >
+          Retry
+        </button>
+      </p>
+    } @else if (store.isLoading() && store.items().length > 0) {
+      <p>Loading more…</p>
+    } @else if (!store.hasMore() && store.items().length > 0) {
+      <p>End of results</p>
+    }
+  </div>
+</div>

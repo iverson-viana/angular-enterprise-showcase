@@ -121,7 +121,8 @@ function buildCustomers(): Customer[] {
 }
 
 let cache: Customer[] | undefined;
-const allCustomers = () => (cache ??= buildCustomers());
+/** The full mock customer set (built once). Also used to link transactions to customers. */
+export const allCustomers = (): readonly Customer[] => (cache ??= buildCustomers());
 
 const COMPARATORS: Record<CustomerSortKey, (a: Customer, b: Customer) => number> = {
   name: (a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id),

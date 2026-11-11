@@ -2,9 +2,6 @@ import type { Routes } from '@angular/router';
 
 import { authGuard, guestGuard, roleGuard } from './core/auth/auth.guards';
 
-const comingSoon = () =>
-  import('./features/coming-soon/coming-soon-page').then((m) => m.ComingSoonPage);
-
 export const routes: Routes = [
   {
     path: 'login',
@@ -33,8 +30,8 @@ export const routes: Routes = [
       {
         path: 'transactions',
         title: 'Transactions · Ledgerly',
-        data: { heading: 'Transactions' },
-        loadComponent: comingSoon,
+        loadComponent: () =>
+          import('./features/transactions/transactions-page').then((m) => m.TransactionsPage),
       },
       {
         path: 'settings',
