@@ -4,6 +4,7 @@
 ![Angular 22](https://img.shields.io/badge/Angular-22-dd0031)
 ![Coverage 90%](https://img.shields.io/badge/coverage-90%25-brightgreen)
 ![WCAG 2.2 AA](<https://img.shields.io/badge/a11y-WCAG%202.2%20AA%20(axe%20in%20CI)-blue>)
+![Lighthouse accessibility 100](https://img.shields.io/badge/Lighthouse%20a11y-100-brightgreen)
 
 A B2B banking dashboard built to show how I structure a production-grade Angular app:
 signals end to end, zoneless change detection, typed Signal Forms, runtime i18n,
@@ -169,6 +170,19 @@ First e2e run: `npx playwright install chromium`.
 
 Unit coverage: **90% statements · 84% branches · 88% functions · 91% lines.** CI fails below
 88 / 80 / 85 / 88. The e2e suite also runs the production build, the same artifact that is deployed.
+
+### Lighthouse (live demo, login page)
+
+|         | Performance | Accessibility | Best practices | SEO |
+| ------- | ----------- | ------------- | -------------- | --- |
+| Desktop | 100         | 100           | 100            | 100 |
+| Mobile  | ~90         | 100           | 100            | 100 |
+
+Mobile performance is bounded by the demo setup: the in-page mock API (MSW and the fixture
+generators, ~68 kB gzipped) must be installed before Angular boots, which adds a round trip on
+a throttled connection. Loading it in parallel or inlining it into the main bundle was measured
+and made the largest contentful paint worse, so it stays a separate chunk. A real backend
+removes that cost entirely.
 
 ## CI/CD
 
