@@ -5,6 +5,7 @@ import type {
   RiskLevel,
   Segment,
 } from '../../app/features/customers/customers.models';
+import type { CreateCustomerRequest } from '../../app/features/customers/new-customer/new-customer.models';
 import type { Page } from '../../app/shared/models/page';
 import { pick, seededRandom } from '../random';
 
@@ -121,8 +122,34 @@ function buildCustomers(): Customer[] {
 }
 
 let cache: Customer[] | undefined;
+const customers = (): Customer[] => (cache ??= buildCustomers());
 /** The full mock customer set (built once). Also used to link transactions to customers. */
-export const allCustomers = (): readonly Customer[] => (cache ??= buildCustomers());
+export const allCustomers = (): readonly Customer[] => customers();
+
+const normalizeName = (name: string): string => name.trim().replace(/\s+/g, ' ').toLowerCase();
+
+export function isCustomerNameTaken(name: string): boolean {
+  const needle = normalizeName(name);
+  return customers().some((c) => normalizeName(c.name) === needle);
+}
+
+/** Adds a customer in onboarding (lives until the page reloads). Risk follows the credit ratio. */
+export function createCustomer(request: CreateCustomerRequest): Customer {
+  const list = customers();
+  const ratio = request.monthlyVolume > 0 ? request.creditLimit / request.monthlyVolume : 0;
+  const customer: Customer = {
+    id: `C-${10001 + list.length}`,
+    name: request.legalName,
+    segment: request.segment,
+    country: request.country,
+    risk: ratio > 2 ? 'high' : ratio > 1 ? 'medium' : 'low',
+    status: 'onboarding',
+    balance: 0,
+    lastActivity: new Date().toISOString().slice(0, 10),
+  };
+  list.push(customer);
+  return customer;
+}
 
 const COMPARATORS: Record<CustomerSortKey, (a: Customer, b: Customer) => number> = {
   name: (a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id),
@@ -133,7 +160,7 @@ const COMPARATORS: Record<CustomerSortKey, (a: Customer, b: Customer) => number>
 /** Filters, sorts and paginates — what a real backend would do. Out-of-range pages clamp. */
 export function queryCustomers(query: CustomerQuery): Page<Customer> {
   const needle = query.q.toLowerCase();
-  const filtered = allCustomers().filter(
+  const filtered = customers().filter(
     (c) =>
       (!needle || c.name.toLowerCase().includes(needle) || c.id.toLowerCase().includes(needle)) &&
       (!query.segment || c.segment === query.segment) &&

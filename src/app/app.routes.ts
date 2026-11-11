@@ -1,6 +1,7 @@
 import type { Routes } from '@angular/router';
 
 import { authGuard, guestGuard, roleGuard } from './core/auth/auth.guards';
+import { unsavedChangesGuard } from './core/navigation/unsaved-changes.guard';
 
 export const routes: Routes = [
   {
@@ -19,6 +20,16 @@ export const routes: Routes = [
         title: 'Dashboard · Ledgerly',
         loadComponent: () =>
           import('./features/dashboard/dashboard-page').then((m) => m.DashboardPage),
+      },
+      {
+        path: 'customers/new',
+        title: 'New customer · Ledgerly',
+        canActivate: [roleGuard('admin')],
+        canDeactivate: [unsavedChangesGuard],
+        loadComponent: () =>
+          import('./features/customers/new-customer/new-customer-page').then(
+            (m) => m.NewCustomerPage,
+          ),
       },
       {
         path: 'customers',

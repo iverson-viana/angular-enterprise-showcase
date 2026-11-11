@@ -1,9 +1,10 @@
 import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, linkedSignal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, type Params, Router } from '@angular/router';
+import { ActivatedRoute, type Params, Router, RouterLink } from '@angular/router';
 import { debounceTime, distinctUntilChanged, filter, map } from 'rxjs';
 
+import { AuthService } from '../../core/auth/auth.service';
 import type { Page } from '../../shared/models/page';
 import { Badge, type BadgeTone } from '../../shared/ui/badge';
 import { Icon, type IconName } from '../../shared/ui/icon';
@@ -52,12 +53,16 @@ type FilterKey = 'segment' | 'risk' | 'status';
 
 @Component({
   selector: 'app-customers-page',
-  imports: [Badge, Icon, Paginator],
+  imports: [Badge, Icon, Paginator, RouterLink],
   templateUrl: './customers-page.html',
 })
 export class CustomersPage {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly auth = inject(AuthService);
+
+  /** Analysts can browse customers; only admins onboard new ones (also enforced by route + API). */
+  protected readonly canCreate = computed(() => this.auth.user()?.role === 'admin');
 
   /** The URL is the single source of truth for the list state. */
   private readonly queryParams = toSignal(this.route.queryParams, {
