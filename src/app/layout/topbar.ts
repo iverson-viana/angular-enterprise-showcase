@@ -2,6 +2,7 @@ import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import { Component, computed, inject, output } from '@angular/core';
 
 import { AuthService } from '../core/auth/auth.service';
+import { ToastService } from '../core/notifications/toast.service';
 import { ThemeService } from '../core/theme/theme.service';
 import { Icon } from '../shared/ui/icon';
 
@@ -72,7 +73,7 @@ const ICON_BUTTON =
             <button
               type="button"
               cdkMenuItem
-              (cdkMenuItemTriggered)="auth.logout()"
+              (cdkMenuItemTriggered)="signOut()"
               class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 focus:bg-slate-100 focus:outline-none dark:text-slate-200 dark:hover:bg-slate-700 dark:focus:bg-slate-700"
             >
               <app-icon name="logout" class="size-4" />
@@ -87,6 +88,7 @@ const ICON_BUTTON =
 export class Topbar {
   protected readonly auth = inject(AuthService);
   protected readonly theme = inject(ThemeService);
+  private readonly toasts = inject(ToastService);
 
   readonly menuClick = output();
 
@@ -100,4 +102,9 @@ export class Topbar {
         .join('')
         .toUpperCase() ?? '',
   );
+
+  protected signOut(): void {
+    this.auth.logout();
+    this.toasts.show({ tone: 'success', message: "You've been signed out." });
+  }
 }

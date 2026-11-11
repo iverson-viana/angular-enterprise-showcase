@@ -8,6 +8,7 @@ import type { AuthResponse } from '../auth/auth.models';
 import { AUTH_API, AuthService } from '../auth/auth.service';
 import { TokenStorage } from '../auth/token-storage';
 import { provideInMemoryTokenStorage } from '../auth/token-storage.testing';
+import { ToastService } from '../notifications/toast.service';
 import { authInterceptor } from './auth.interceptor';
 
 const session = (suffix: string): AuthResponse => ({
@@ -100,7 +101,7 @@ describe('authInterceptor', () => {
     expect(await b).toBe('b');
   });
 
-  it('logs out when the refresh fails', async () => {
+  it('logs out and explains why when the refresh fails', async () => {
     await signIn();
     const result = firstValueFrom(client.get('/api/customers'));
 
@@ -111,6 +112,9 @@ describe('authInterceptor', () => {
     expect(auth.isAuthenticated()).toBe(false);
     expect(TestBed.inject(TokenStorage).getRefreshToken()).toBeNull();
     expect(TestBed.inject(Router).navigateByUrl).toHaveBeenCalledWith('/login');
+    expect(TestBed.inject(ToastService).toasts()).toMatchObject([
+      { key: 'session-expired', tone: 'warning' },
+    ]);
   });
 
   it('passes through non-401 errors untouched', async () => {
