@@ -65,7 +65,16 @@
           "defaultConfiguration": "development"
         },
         "test": {
-          "builder": "@angular/build:unit-test"
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "coverageReporters": ["text-summary", "html", "lcov"],
+            "coverageThresholds": {
+              "statements": 88,
+              "branches": 80,
+              "functions": 85,
+              "lines": 88
+            }
+          }
         },
         "lint": {
           "builder": "@angular-eslint/builder:lint",

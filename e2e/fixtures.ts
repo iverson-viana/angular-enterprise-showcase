@@ -39,7 +39,13 @@ export const test = base.extend<Fixtures>({
 
 export { expect };
 
-/** Waits for the in-page mock API to settle (no skeletons / busy regions left). */
+/**
+ * Waits for the page to be rendered and its data loaded: a heading exists (the app has
+ * booted — before that, "no busy region" is trivially true), and no busy region or
+ * skeleton placeholder is left.
+ */
 export async function waitForIdle(page: Page): Promise<void> {
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+  await expect(page.locator('[class*="animate-pulse"]')).toHaveCount(0);
 }

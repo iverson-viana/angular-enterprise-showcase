@@ -37,8 +37,8 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Unit tests
-        run: npm run test:ci
+      - name: Unit tests (coverage thresholds enforced)
+        run: npm run test:coverage
 
       - name: Build
         run: npm run build

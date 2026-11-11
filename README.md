@@ -1,59 +1,193 @@
-# AngularEnterpriseShowcase
+# Ledgerly — Angular enterprise showcase
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.0.4.
+[![CI](https://github.com/Iverspark/angular-enterprise-showcase/actions/workflows/ci.yml/badge.svg)](https://github.com/Iverspark/angular-enterprise-showcase/actions/workflows/ci.yml)
+![Angular 22](https://img.shields.io/badge/Angular-22-dd0031)
+![Coverage 90%](https://img.shields.io/badge/coverage-90%25-brightgreen)
+![WCAG 2.2 AA](<https://img.shields.io/badge/a11y-WCAG%202.2%20AA%20(axe%20in%20CI)-blue>)
 
-## Development server
+A B2B banking dashboard built to show how I structure a production-grade Angular app:
+signals end to end, zoneless change detection, typed Signal Forms, runtime i18n,
+accessibility verified in CI, and a test pyramid that gates every deploy.
 
-To start a local development server, run:
+**Live demo → [ledgerly.pages.dev](https://ledgerly.pages.dev)** · sign in with a demo role on the login page.
+
+![Ledgerly demo: sign in, dashboard, customers, onboarding form with validation, language and theme switch](docs/demo.gif)
+
+> Everything here is fictional: company names, people, IBANs and tax IDs are invented or
+> standard documentation samples. The API is mocked inside the page, so the demo needs no backend.
+
+## Highlights
+
+- **Angular 22, the modern way** — standalone components, zoneless, OnPush by default, signals
+  for state (`computed`, `linkedSignal`, `httpResource`), new control flow and `@defer`.
+- **Real-world features** — JWT auth with silent refresh, role-based access, a dashboard with an
+  accessible hand-built chart, a server-paginated table with URL state, a 10,000-row virtualized
+  infinite feed, and a create/edit form with masks, checksums and async validation.
+- **Accessibility as a requirement** — keyboard support everywhere, focus management, live
+  regions, `axe` (WCAG 2.2 AA) run by Playwright in light and dark mode on every push.
+- **Tested and gated** — 161 unit/component tests (90% statement coverage, thresholds enforced)
+  and 21 end-to-end tests; lint → unit → build → e2e must pass before a deploy.
+- **EN / PT-BR at runtime** — typed message keys checked at compile time, locale-aware numbers,
+  dates and currency, switch without reloading.
+
+## Screenshots
+
+| Dashboard                                                                             | Dark mode                                                                            |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| ![Dashboard with KPI tiles and cash flow chart](docs/screenshots/dashboard-light.png) | ![Dashboard in dark mode](docs/screenshots/dashboard-dark.png)                       |
+| **Customers — filters, sorting and paging in the URL**                                | **Onboarding form — focused error summary**                                          |
+| ![Customers table filtered by high risk](docs/screenshots/customers.png)              | ![Customer form showing an error summary](docs/screenshots/customer-form-errors.png) |
+| **Virtualized transactions feed**                                                     | **Português (Brasil)**                                                               |
+| ![Transactions feed in dark mode](docs/screenshots/transactions-dark.png)             | ![Customers page in Brazilian Portuguese](docs/screenshots/customers-pt-br.png)      |
+
+Screenshots and the GIF are generated from the running app by Playwright (`npm run docs:media`).
+
+## Demo accounts
+
+| Role    | Email                  | Can                                                  |
+| ------- | ---------------------- | ---------------------------------------------------- |
+| Admin   | `admin@ledgerly.dev`   | everything, including creating and editing customers |
+| Analyst | `analyst@ledgerly.dev` | dashboard, customers (read-only), transactions       |
+| Viewer  | `viewer@ledgerly.dev`  | dashboard and transactions                           |
+
+Password for all: `Ledgerly#2026` (the login page fills it in for you).
+
+## Stack
+
+| Area      | Choice                                                                           |
+| --------- | -------------------------------------------------------------------------------- |
+| Framework | Angular 22 (standalone, zoneless, signals), TypeScript 6 strict                  |
+| UI        | Tailwind CSS v4, Angular CDK (menu, virtual scroll), hand-built SVG chart        |
+| Forms     | Signal Forms (`@angular/forms/signals`) with schema validation                   |
+| Data      | `HttpClient` + `httpResource`, functional interceptors                           |
+| Mock API  | MSW handlers served in-page via `@mswjs/interceptors`                            |
+| Tests     | Vitest + jsdom (unit/component), Playwright + `@axe-core/playwright` (e2e, a11y) |
+| Quality   | ESLint (angular-eslint), Prettier, Husky + lint-staged, Commitlint               |
+| CI/CD     | GitHub Actions → Cloudflare Pages (production on `main`, previews on PRs)        |
+
+## Architecture decisions
+
+**Why signals, zoneless and OnPush everywhere.** Change detection runs only where a signal a
+template reads has changed. There is no Zone.js patching of browser APIs, no
+`ChangeDetectorRef` plumbing, and derived state is declared once with `computed()` instead of
+being kept in sync by hand. It is also where Angular is heading, so the code reads like new
+Angular code should.
+
+**Why standalone components.** Each component declares exactly what its template uses, so
+dependencies are explicit, lazy loading is per route (`loadComponent`) and there is no
+`NgModule` layer to maintain. Create and edit customer share one lazy chunk.
+
+**State strategy — the smallest tool that fits.**
+
+- _Server state_ lives in `httpResource`. `linkedSignal` keeps the last page on screen (dimmed)
+  while the next one loads, so there is no skeleton flash on every filter change.
+- _List state_ (filters, sort, page, dashboard period) lives in the **URL**, so it is shareable,
+  bookmarkable and survives reload and Back. The page and the mock API share one parser, so
+  defaults are dropped from the URL and invalid params fall back safely.
+- _Feature state_ that needs coordination — the infinite transactions feed with cursor
+  pagination and request cancellation — is a small signal store provided by the page, so it is
+  scoped to it. A global store such as NgRx would add ceremony without solving anything here.
+- _App-wide state_ (session, theme, language, toasts) lives in root `@Service()`s that expose
+  read-only signals.
+
+**Auth.** The access token lives in memory only. The refresh token is persisted so a reload
+restores the session. One interceptor attaches the token, refreshes once on a `401` (concurrent
+requests share that refresh) and replays the request. A failed refresh signs the user out and
+says why. Route guards mirror the API's role checks, and the mock API enforces them too.
+
+**Mock API inside the page, not in a Service Worker.** MSW's `setupWorker` silently stops
+mocking when the browser terminates the idle worker, which showed up as random failures after
+navigating. The handlers run through `@mswjs/interceptors`' fetch interceptor instead (this
+requires `withFetch()`). The same build is deployed as the demo and tested end to end.
+
+**Forms.** Signal Forms with the rules in a separate, unit-tested schema:
+
+- validators that depend on the selected country (CNPJ — including the 2026 alphanumeric
+  format — NIPC, VAT ID, EIN);
+- IBAN mod-97 and ABA routing checksums;
+- cross-field rules (credit limit ≤ 3× volume) and a tree validator for duplicate emails;
+- a debounced async name check, skipped for the saved name when editing.
+
+Server conflicts (`409`) are mapped back onto the field that caused them. Masked inputs are
+custom `FormValueControl`s: the model stores the clean value and the caret stays in place while
+the display reformats.
+
+**Runtime i18n instead of `@angular/localize`.** Compile-time localization produces one build per
+language, and switching languages means loading another URL. For a demo with a language switch,
+runtime translation is the better trade-off:
+
+- English is the source dictionary and defines a `MessageKey` type. A missing translation, or a
+  typo in a template, fails the build.
+- A test checks that every Portuguese string keeps the same `{placeholders}`.
+- The active locale is a signal that formatters read, so every formatted number and date
+  re-renders on a switch with no reload.
+- Portuguese ships as a separate 3 kB chunk.
+
+**Accessibility.**
+
+- Skip link, and focus moves to the main content on navigation.
+- The mobile navigation is a native `<dialog>`.
+- Two toast live regions exist from page load: errors are assertive and never auto-dismiss;
+  other toasts pause while hovered or focused.
+- The chart is keyboard-readable and has a data-table view.
+- The virtualized feed uses ARIA table roles with `aria-rowcount`/`aria-rowindex`, so screen
+  readers announce the real position in all 10,000 rows.
+- Error summaries take focus, and accessible names include their visible labels.
+- `axe` runs in CI on the main pages, in both themes, and on a form showing errors.
+
+## Getting started
+
+Requirements: Node 26 (see `.nvmrc`) and npm.
 
 ```bash
-ng serve
+npm ci
+npm start            # http://localhost:4200
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Scripts
 
-## Code scaffolding
+| Script                            | What it does                                                   |
+| --------------------------------- | -------------------------------------------------------------- |
+| `npm start`                       | Dev server with the in-page mock API                           |
+| `npm run build`                   | Production build (`dist/`)                                     |
+| `npm test`                        | Unit/component tests in watch mode                             |
+| `npm run test:coverage`           | Unit tests once, with coverage report and enforced thresholds  |
+| `npm run e2e`                     | Playwright end-to-end + axe suite against the production build |
+| `npm run e2e:ui`                  | Playwright UI mode                                             |
+| `npm run lint` / `npm run format` | ESLint / Prettier                                              |
+| `npm run docs:media`              | Regenerates the README screenshots and GIF                     |
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+First e2e run: `npx playwright install chromium`.
 
-```bash
-ng generate component component-name
+## Testing
+
+| Layer            | Tooling                                            | Scope                                                                                          |
+| ---------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Unit & component | Vitest + jsdom, `TestBed`, `HttpTestingController` | 161 tests: services, interceptors, guards, validators, schemas, components through the DOM     |
+| End-to-end       | Playwright (Chromium)                              | 21 tests: auth and roles, URL state, onboarding create/edit, infinite scroll, i18n, mobile nav |
+| Accessibility    | `@axe-core/playwright`                             | WCAG 2.2 A/AA rules on key pages, light and dark                                               |
+
+Unit coverage: **90% statements · 84% branches · 88% functions · 91% lines.** CI fails below
+88 / 80 / 85 / 88. The e2e suite also runs the production build, the same artifact that is deployed.
+
+## CI/CD
+
+```
+push / PR ──► verify: format → lint → unit tests (+coverage gate) → build
+                └──► e2e: Playwright + axe on that build
+                       └──► deploy: Cloudflare Pages (main → production, PR → preview)
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+The deploy job ships the exact build artifact that passed the checks; nothing is rebuilt.
 
-```bash
-ng generate --help
+## Project structure
+
 ```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
+src/app/
+  core/        auth, http interceptors, i18n, notifications, error handling, theme, guards
+  shared/      UI (icon, badge, paginator), form controls (masked/amount inputs), formatting, validators
+  features/    dashboard · customers (list + create/edit form) · transactions · settings · errors
+  layout/      shell, sidebar, top bar
+src/mocks/     MSW handlers + deterministic, invented fixtures (seeded PRNG)
+e2e/           Playwright specs, fixtures and the README media capture
 ```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
