@@ -42,6 +42,11 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 
+# Playwright
+/test-results
+/playwright-report
+/blob-report
+
 # Claude Code local settings
 .claude/settings.local.json
 CLAUDE.md
