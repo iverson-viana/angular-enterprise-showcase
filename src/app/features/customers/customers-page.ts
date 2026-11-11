@@ -5,6 +5,9 @@ import { ActivatedRoute, type Params, Router, RouterLink } from '@angular/router
 import { debounceTime, distinctUntilChanged, filter, map } from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth.service';
+import { I18n } from '../../core/i18n/i18n.service';
+import type { MessageKey } from '../../core/i18n/translate';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import type { Page } from '../../shared/models/page';
 import { Badge, type BadgeTone } from '../../shared/ui/badge';
 import { Icon, type IconName } from '../../shared/ui/icon';
@@ -23,12 +26,9 @@ import {
   CUSTOMER_STATUSES,
   type Customer,
   type CustomerStatus,
-  RISK_LABELS,
   RISK_LEVELS,
   type RiskLevel,
-  SEGMENT_LABELS,
   SEGMENTS,
-  STATUS_LABELS,
 } from './customers.models';
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -43,23 +43,24 @@ const STATUS_TONES: Record<CustomerStatus, BadgeTone> = {
   onboarding: 'info',
   suspended: 'neutral',
 };
-const SORT_LABELS: Record<CustomerSortKey, string> = {
-  name: 'Customer',
-  balance: 'Balance',
-  lastActivity: 'Last activity',
+const SORT_LABELS: Record<CustomerSortKey, MessageKey> = {
+  name: 'customers.customer',
+  balance: 'customers.balance',
+  lastActivity: 'customers.lastActivity',
 };
 
 type FilterKey = 'segment' | 'risk' | 'status';
 
 @Component({
   selector: 'app-customers-page',
-  imports: [Badge, Icon, Paginator, RouterLink],
+  imports: [Badge, Icon, Paginator, RouterLink, TranslatePipe],
   templateUrl: './customers-page.html',
 })
 export class CustomersPage {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly auth = inject(AuthService);
+  private readonly i18n = inject(I18n);
 
   /** Analysts can browse customers; only admins onboard new ones (also enforced by route + API). */
   protected readonly canManage = computed(() => this.auth.user()?.role === 'admin');
@@ -89,11 +90,11 @@ export class CustomersPage {
   protected readonly rows = computed(() =>
     (this.result()?.items ?? []).map((c) => ({
       ...c,
-      segmentLabel: SEGMENT_LABELS[c.segment],
+      segmentLabel: this.i18n.t(`customers.segments.${c.segment}`),
       countryLabel: countryName(c.country),
-      riskLabel: RISK_LABELS[c.risk],
+      riskLabel: this.i18n.t(`customers.risks.${c.risk}`),
       riskTone: RISK_TONES[c.risk],
-      statusLabel: STATUS_LABELS[c.status],
+      statusLabel: this.i18n.t(`customers.statuses.${c.status}`),
       statusTone: STATUS_TONES[c.status],
       balanceLabel: formatFull(c.balance, 'currency'),
       lastActivityLabel: formatDate(c.lastActivity),
@@ -103,23 +104,26 @@ export class CustomersPage {
   /** Local echo of the search box; synced back from the URL on back/forward navigation. */
   protected readonly searchText = linkedSignal(() => this.query().q);
 
-  protected readonly filters = [
-    {
-      key: 'segment',
-      label: 'Segment',
-      options: SEGMENTS.map((v) => ({ value: v, label: SEGMENT_LABELS[v] })),
-    },
-    {
-      key: 'risk',
-      label: 'Risk',
-      options: RISK_LEVELS.map((v) => ({ value: v, label: RISK_LABELS[v] })),
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      options: CUSTOMER_STATUSES.map((v) => ({ value: v, label: STATUS_LABELS[v] })),
-    },
-  ] as const;
+  protected readonly filters = computed(() => {
+    const t = this.i18n.t;
+    return [
+      {
+        key: 'segment',
+        label: t('customers.segment'),
+        options: SEGMENTS.map((v) => ({ value: v, label: t(`customers.segments.${v}`) })),
+      },
+      {
+        key: 'risk',
+        label: t('customers.risk'),
+        options: RISK_LEVELS.map((v) => ({ value: v, label: t(`customers.risks.${v}`) })),
+      },
+      {
+        key: 'status',
+        label: t('customers.status'),
+        options: CUSTOMER_STATUSES.map((v) => ({ value: v, label: t(`customers.statuses.${v}`) })),
+      },
+    ] as const;
+  });
 
   protected readonly hasActiveFilters = computed(() => {
     const { q, segment, risk, status } = this.query();
@@ -128,7 +132,10 @@ export class CustomersPage {
 
   protected readonly caption = computed(() => {
     const { sort, dir } = this.query();
-    return `Customers, sorted by ${SORT_LABELS[sort]} ${dir === 'asc' ? 'ascending' : 'descending'}`;
+    return this.i18n.t('customers.caption', {
+      column: this.i18n.t(SORT_LABELS[sort]),
+      direction: this.i18n.t(dir === 'asc' ? 'customers.ascending' : 'customers.descending'),
+    });
   });
 
   protected readonly pageSizes = PAGE_SIZES;

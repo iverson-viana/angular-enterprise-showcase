@@ -1,6 +1,7 @@
 import { Component, computed, inject, input } from '@angular/core';
 
 import { Icon, type IconName } from '../../shared/ui/icon';
+import { TranslatePipe } from '../i18n/translate.pipe';
 import { type Toast, ToastService, type ToastTone } from './toast.service';
 
 const TONES: Record<ToastTone, { icon: IconName; color: string }> = {
@@ -12,13 +13,13 @@ const TONES: Record<ToastTone, { icon: IconName; color: string }> = {
 
 @Component({
   selector: 'app-toast-item',
-  imports: [Icon],
+  imports: [Icon, TranslatePipe],
   template: `
     <app-icon [name]="tone().icon" class="mt-0.5 size-5" [class]="tone().color" />
     <p class="flex-1 text-sm text-slate-800 dark:text-slate-100">{{ toast().message }}</p>
     <button
       type="button"
-      aria-label="Dismiss notification"
+      [attr.aria-label]="'toasts.dismiss' | t"
       (click)="toasts.dismiss(toast().id)"
       class="-m-1 inline-flex size-7 shrink-0 items-center justify-center rounded text-slate-500 hover:bg-slate-100 hover:text-slate-800 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white dark:focus-visible:ring-blue-400"
     >
@@ -43,10 +44,10 @@ export class ToastItem {
  */
 @Component({
   selector: 'app-toast-outlet',
-  imports: [ToastItem],
+  imports: [ToastItem, TranslatePipe],
   template: `
     <section
-      aria-label="Notifications"
+      [attr.aria-label]="'toasts.region' | t"
       class="pointer-events-none fixed inset-x-4 bottom-4 z-50 flex flex-col items-center gap-2 sm:inset-x-auto sm:right-4 sm:items-end"
       (mouseenter)="toasts.pause()"
       (mouseleave)="toasts.resume()"

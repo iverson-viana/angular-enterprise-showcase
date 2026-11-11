@@ -1,8 +1,9 @@
 import type { Role } from '../core/auth/auth.models';
+import type { MessageKey } from '../core/i18n/translate';
 import type { IconName } from '../shared/ui/icon';
 
 export interface NavItem {
-  label: string;
+  labelKey: MessageKey;
   path: string;
   icon: IconName;
   /** Roles allowed to see the item. Omit for every authenticated user. Mirrors the route guards. */
@@ -12,8 +13,13 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: readonly NavItem[] = [
-  { label: 'Dashboard', path: '/', icon: 'home', exact: true },
-  { label: 'Customers', path: '/customers', icon: 'users', roles: ['admin', 'analyst'] },
-  { label: 'Transactions', path: '/transactions', icon: 'transfers' },
-  { label: 'Settings', path: '/settings', icon: 'settings', roles: ['admin'] },
+  { labelKey: 'pages.dashboard', path: '/', icon: 'home', exact: true },
+  {
+    labelKey: 'pages.customers',
+    path: '/customers',
+    icon: 'users',
+    roles: ['admin', 'analyst'],
+  },
+  { labelKey: 'pages.transactions', path: '/transactions', icon: 'transfers' },
+  { labelKey: 'pages.settings', path: '/settings', icon: 'settings', roles: ['admin'] },
 ];

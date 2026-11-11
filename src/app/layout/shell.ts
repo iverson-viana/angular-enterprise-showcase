@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { distinctUntilChanged, filter, map } from 'rxjs';
 
+import { TranslatePipe } from '../core/i18n/translate.pipe';
 import { Icon } from '../shared/ui/icon';
 import { SidebarNav } from './sidebar-nav';
 import { Topbar } from './topbar';
@@ -13,7 +14,7 @@ import { Topbar } from './topbar';
  */
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, SidebarNav, Topbar, Icon],
+  imports: [RouterOutlet, SidebarNav, Topbar, Icon, TranslatePipe],
   templateUrl: './shell.html',
 })
 export class Shell {

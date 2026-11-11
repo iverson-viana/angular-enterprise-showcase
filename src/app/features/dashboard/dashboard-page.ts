@@ -3,6 +3,8 @@ import { Component, computed, inject, input, linkedSignal } from '@angular/core'
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { AuthService } from '../../core/auth/auth.service';
+import { I18n } from '../../core/i18n/i18n.service';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { CashflowChart } from './cashflow-chart';
 import {
   DASHBOARD_RANGES,
@@ -13,34 +15,31 @@ import {
 import { StatTile } from './stat-tile';
 
 const DEFAULT_RANGE: DashboardRange = '12m';
-const RANGE_LABELS: Record<DashboardRange, string> = {
-  '3m': '3 months',
-  '6m': '6 months',
-  '12m': '12 months',
-};
 
 @Component({
   selector: 'app-dashboard-page',
-  imports: [StatTile, CashflowChart],
+  imports: [StatTile, CashflowChart, TranslatePipe],
   templateUrl: './dashboard-page.html',
 })
 export class DashboardPage {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   protected readonly auth = inject(AuthService);
+  private readonly i18n = inject(I18n);
 
   /** `?range=` query param (withComponentInputBinding). Unknown values fall back to the default. */
   readonly range = input<string>();
 
-  protected readonly ranges = DASHBOARD_RANGES.map((value) => ({
-    value,
-    label: RANGE_LABELS[value],
-  }));
+  protected readonly ranges = computed(() =>
+    DASHBOARD_RANGES.map((value) => ({ value, label: this.i18n.t(`dashboard.ranges.${value}`) })),
+  );
   protected readonly selectedRange = computed<DashboardRange>(() => {
     const range = this.range();
     return isDashboardRange(range) ? range : DEFAULT_RANGE;
   });
-  protected readonly periodLabel = computed(() => RANGE_LABELS[this.selectedRange()]);
+  protected readonly periodLabel = computed(() =>
+    this.i18n.t(`dashboard.ranges.${this.selectedRange()}`),
+  );
 
   private readonly summaryResource = httpResource<DashboardSummary>(
     () => `/api/dashboard?range=${this.selectedRange()}`,

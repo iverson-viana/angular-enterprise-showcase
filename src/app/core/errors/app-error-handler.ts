@@ -1,5 +1,6 @@
 import { ErrorHandler, inject, Injectable } from '@angular/core';
 
+import { I18n } from '../i18n/i18n.service';
 import { ToastService } from '../notifications/toast.service';
 
 /**
@@ -10,13 +11,14 @@ import { ToastService } from '../notifications/toast.service';
 @Injectable()
 export class AppErrorHandler implements ErrorHandler {
   private readonly toasts = inject(ToastService);
+  private readonly i18n = inject(I18n);
 
   handleError(error: unknown): void {
     console.error(error);
     this.toasts.show({
       key: 'unexpected-error',
       tone: 'error',
-      message: 'Something went wrong. If the problem continues, reload the page.',
+      message: this.i18n.t('errors.unexpected'),
     });
   }
 }

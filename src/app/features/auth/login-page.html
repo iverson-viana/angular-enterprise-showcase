@@ -1,7 +1,9 @@
+<div class="fixed top-3 right-3"><app-locale-switcher /></div>
+
 <main class="w-full max-w-sm">
-  <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">Sign in to Ledgerly</h1>
+  <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">{{ 'login.title' | t }}</h1>
   <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-    B2B banking dashboard — demo environment.
+    {{ 'login.subtitle' | t }}
   </p>
 
   <form class="mt-8 space-y-5" novalidate (submit)="onSubmit($event)">
@@ -10,14 +12,14 @@
         role="alert"
         class="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
       >
-        {{ message }}
+        {{ message | t }}
       </p>
     }
 
     @let emailState = loginForm.email();
     <div>
       <label for="email" class="block text-sm font-medium text-slate-800 dark:text-slate-200">
-        Email
+        {{ 'login.email' | t }}
       </label>
       <input
         id="email"
@@ -40,7 +42,7 @@
     @let passwordState = loginForm.password();
     <div>
       <label for="password" class="block text-sm font-medium text-slate-800 dark:text-slate-200">
-        Password
+        {{ 'login.password' | t }}
       </label>
       <input
         id="password"
@@ -66,7 +68,7 @@
       [attr.aria-busy]="loginForm().submitting()"
       class="w-full rounded-md bg-blue-700 px-4 py-2 font-medium text-white hover:bg-blue-800 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950"
     >
-      {{ loginForm().submitting() ? 'Signing in…' : 'Sign in' }}
+      {{ (loginForm().submitting() ? 'login.submitting' : 'login.submit') | t }}
     </button>
   </form>
 
@@ -75,10 +77,10 @@
     aria-labelledby="demo-heading"
   >
     <h2 id="demo-heading" class="text-sm font-medium text-slate-800 dark:text-slate-200">
-      Demo accounts
+      {{ 'login.demoHeading' | t }}
     </h2>
     <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-      Fill the form with a role to explore permissions.
+      {{ 'login.demoHint' | t }}
     </p>
     <ul class="mt-3 flex flex-wrap gap-2">
       @for (account of demoAccounts; track account.email) {
@@ -86,9 +88,9 @@
           <button
             type="button"
             (click)="useDemoAccount(account.email)"
-            class="rounded-full border border-slate-400 px-3 py-1 text-sm text-slate-800 capitalize hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus-visible:ring-blue-400"
+            class="rounded-full border border-slate-400 px-3 py-1 text-sm text-slate-800 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus-visible:ring-blue-400"
           >
-            {{ account.role }}
+            {{ roleKey(account.role) | t }}
           </button>
         </li>
       }

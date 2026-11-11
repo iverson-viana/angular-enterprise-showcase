@@ -4,12 +4,15 @@ import {
   provideHttpClientTesting,
   type TestRequest,
 } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, type Params, provideRouter, Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import type { MockInstance } from 'vitest';
 
 import { queryCustomers } from '../../../mocks/data/customers';
+import type { Role } from '../../core/auth/auth.models';
+import { AuthService } from '../../core/auth/auth.service';
 import { parseCustomerQuery } from './customer-query';
 import { CustomersPage } from './customers-page';
 
@@ -119,5 +122,32 @@ describe('CustomersPage', () => {
     )!;
     clear.click();
     expect(lastNavigation()).toMatchObject({ q: null, segment: null, risk: null, status: null });
+  });
+
+  describe('management actions', () => {
+    /** Swaps the session for the test (the module is already built by the outer setup). */
+    const signInAs = (role: Role) =>
+      Object.assign(TestBed.inject(AuthService), {
+        user: signal({ id: 'u-1', name: 'Test', email: 't@x.dev', role }),
+      });
+
+    it('lets admins create and edit customers', async () => {
+      signInAs('admin');
+      const { el } = await render();
+      const links = Array.from(el.querySelectorAll('a'), (a) => a.textContent?.trim());
+      expect(links).toContain('New customer');
+      const edit = el.querySelector<HTMLAnchorElement>('tbody a[aria-label^="Edit "]');
+      // Visible "Edit", announced with the customer name (label-in-name, WCAG 2.5.3).
+      const firstName = el.querySelector('tbody th span')?.textContent?.trim();
+      expect(edit?.textContent?.trim()).toBe('Edit');
+      expect(edit?.getAttribute('aria-label')).toBe(`Edit ${firstName}`);
+    });
+
+    it('hides them from analysts (route guard and API enforce it too)', async () => {
+      signInAs('analyst');
+      const { el } = await render();
+      expect(el.textContent).not.toContain('New customer');
+      expect(el.querySelector('tbody a[aria-label^="Edit "]')).toBeNull();
+    });
   });
 });

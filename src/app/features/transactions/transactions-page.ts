@@ -8,9 +8,11 @@ import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-i
 import { ActivatedRoute, Router } from '@angular/router';
 import { debounceTime, distinctUntilChanged, EMPTY, filter, map, switchMap } from 'rxjs';
 
+import { I18n } from '../../core/i18n/i18n.service';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { Badge, type BadgeTone } from '../../shared/ui/badge';
 import { Icon } from '../../shared/ui/icon';
-import { formatDateTime, formatFull, formatSignedAmount } from '../../shared/utils/format';
+import { formatDateTime, formatSignedAmount } from '../../shared/utils/format';
 import {
   DEFAULT_TRANSACTION_FILTERS,
   parseTransactionFilters,
@@ -19,13 +21,10 @@ import {
   type TransactionFilters,
 } from './transaction-query';
 import {
-  METHOD_LABELS,
   type Transaction,
   TRANSACTION_STATUSES,
   TRANSACTION_TYPES,
   type TransactionStatus,
-  TX_STATUS_LABELS,
-  TYPE_LABELS,
 } from './transactions.models';
 import { TransactionsStore } from './transactions.store';
 
@@ -46,7 +45,14 @@ type FilterKey = 'type' | 'status';
 
 @Component({
   selector: 'app-transactions-page',
-  imports: [CdkVirtualScrollViewport, CdkFixedSizeVirtualScroll, CdkVirtualForOf, Badge, Icon],
+  imports: [
+    CdkVirtualScrollViewport,
+    CdkFixedSizeVirtualScroll,
+    CdkVirtualForOf,
+    Badge,
+    Icon,
+    TranslatePipe,
+  ],
   providers: [TransactionsStore],
   templateUrl: './transactions-page.html',
 })
@@ -54,6 +60,7 @@ export class TransactionsPage {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   protected readonly store = inject(TransactionsStore);
+  private readonly i18n = inject(I18n);
 
   protected readonly rowHeight = ROW_HEIGHT_PX;
   private readonly viewport = viewChild(CdkVirtualScrollViewport);
@@ -70,19 +77,18 @@ export class TransactionsPage {
     this.store.items().map((tx) => ({
       ...tx,
       bookedAtLabel: formatDateTime(tx.bookedAt),
-      methodLabel: METHOD_LABELS[tx.method],
-      statusLabel: TX_STATUS_LABELS[tx.status],
+      methodLabel: this.i18n.t(`transactions.methods.${tx.method}`),
+      statusLabel: this.i18n.t(`transactions.statuses.${tx.status}`),
       statusTone: STATUS_TONES[tx.status],
       amountLabel: formatSignedAmount(tx.amount, tx.type === 'credit' ? 'in' : 'out'),
-      typeLabel: TYPE_LABELS[tx.type],
+      typeLabel: this.i18n.t(`transactions.types.${tx.type}`),
     })),
   );
 
   protected readonly summary = computed(() => {
     const total = this.store.total();
     if (total === null) return '';
-    const loaded = formatFull(this.store.items().length, 'count');
-    return `Showing ${loaded} of ${formatFull(total, 'count')} transactions`;
+    return this.i18n.t('transactions.summary', { loaded: this.store.items().length, total });
   });
 
   protected readonly searchText = linkedSignal(() => this.filters().q);
@@ -90,18 +96,24 @@ export class TransactionsPage {
     const { q, type, status } = this.filters();
     return q !== '' || type !== null || status !== null;
   });
-  protected readonly filterControls = [
-    {
-      key: 'type',
-      label: 'Type',
-      options: TRANSACTION_TYPES.map((v) => ({ value: v, label: TYPE_LABELS[v] })),
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      options: TRANSACTION_STATUSES.map((v) => ({ value: v, label: TX_STATUS_LABELS[v] })),
-    },
-  ] as const;
+  protected readonly filterControls = computed(() => {
+    const t = this.i18n.t;
+    return [
+      {
+        key: 'type',
+        label: t('transactions.type'),
+        options: TRANSACTION_TYPES.map((v) => ({ value: v, label: t(`transactions.types.${v}`) })),
+      },
+      {
+        key: 'status',
+        label: t('transactions.status'),
+        options: TRANSACTION_STATUSES.map((v) => ({
+          value: v,
+          label: t(`transactions.statuses.${v}`),
+        })),
+      },
+    ] as const;
+  });
 
   protected readonly skeletonRows = Array.from({ length: 8 }, (_, i) => i);
 

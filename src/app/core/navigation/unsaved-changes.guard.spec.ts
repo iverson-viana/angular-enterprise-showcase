@@ -1,11 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import type { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 
-import {
-  type HasUnsavedChanges,
-  UNSAVED_CHANGES_MESSAGE,
-  unsavedChangesGuard,
-} from './unsaved-changes.guard';
+import { type HasUnsavedChanges, unsavedChangesGuard } from './unsaved-changes.guard';
 
 describe('unsavedChangesGuard', () => {
   const run = (dirty: boolean) => {
@@ -35,6 +31,8 @@ describe('unsavedChangesGuard', () => {
       .mockReturnValueOnce(true);
     expect(run(true)).toBe(false);
     expect(run(true)).toBe(true);
-    expect(confirm).toHaveBeenCalledWith(UNSAVED_CHANGES_MESSAGE);
+    expect(confirm).toHaveBeenCalledWith(
+      'You have unsaved changes. Leave this page and discard them?',
+    );
   });
 });

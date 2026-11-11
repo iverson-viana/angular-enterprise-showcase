@@ -1,6 +1,7 @@
 import type { Routes } from '@angular/router';
 
 import { authGuard, guestGuard, roleGuard } from './core/auth/auth.guards';
+import { pageTitle } from './core/i18n/i18n-title.strategy';
 import { unsavedChangesGuard } from './core/navigation/unsaved-changes.guard';
 
 /** Create and edit share one lazy chunk. */
@@ -10,7 +11,7 @@ const loadCustomerForm = () =>
 export const routes: Routes = [
   {
     path: 'login',
-    title: 'Sign in · Ledgerly',
+    title: pageTitle('pages.signIn'),
     canActivate: [guestGuard],
     loadComponent: () => import('./features/auth/login-page').then((m) => m.LoginPage),
   },
@@ -21,47 +22,47 @@ export const routes: Routes = [
     children: [
       {
         path: '',
-        title: 'Dashboard · Ledgerly',
+        title: pageTitle('pages.dashboard'),
         loadComponent: () =>
           import('./features/dashboard/dashboard-page').then((m) => m.DashboardPage),
       },
       {
         path: 'customers/new',
-        title: 'New customer · Ledgerly',
+        title: pageTitle('pages.newCustomer'),
         canActivate: [roleGuard('admin')],
         canDeactivate: [unsavedChangesGuard],
         loadComponent: loadCustomerForm,
       },
       {
         path: 'customers/:id/edit',
-        title: 'Edit customer · Ledgerly',
+        title: pageTitle('pages.editCustomer'),
         canActivate: [roleGuard('admin')],
         canDeactivate: [unsavedChangesGuard],
         loadComponent: loadCustomerForm,
       },
       {
         path: 'customers',
-        title: 'Customers · Ledgerly',
+        title: pageTitle('pages.customers'),
         canActivate: [roleGuard('admin', 'analyst')],
         loadComponent: () =>
           import('./features/customers/customers-page').then((m) => m.CustomersPage),
       },
       {
         path: 'transactions',
-        title: 'Transactions · Ledgerly',
+        title: pageTitle('pages.transactions'),
         loadComponent: () =>
           import('./features/transactions/transactions-page').then((m) => m.TransactionsPage),
       },
       {
         path: 'settings',
-        title: 'Settings · Ledgerly',
+        title: pageTitle('pages.settings'),
         canActivate: [roleGuard('admin')],
         loadComponent: () =>
           import('./features/settings/settings-page').then((m) => m.SettingsPage),
       },
       {
         path: 'forbidden',
-        title: 'Access denied · Ledgerly',
+        title: pageTitle('pages.forbidden'),
         loadComponent: () =>
           import('./features/errors/forbidden-page').then((m) => m.ForbiddenPage),
       },

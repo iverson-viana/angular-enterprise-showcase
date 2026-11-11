@@ -1,3 +1,5 @@
+import { formatFull } from '../utils/format';
+
 /**
  * An input mask keeps two representations of a value:
  * - `clean`: what the model stores (e.g. "123456780");
@@ -45,9 +47,10 @@ export function patternMask(pattern: string): InputMask {
   };
 }
 
-const groupFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
-
-/** Whole, non-negative amounts with thousands separators ("1250000" ⇄ "1,250,000"). */
+/**
+ * Whole, non-negative amounts with the locale's thousands separator
+ * ("1250000" ⇄ "1,250,000" / "1.250.000"). Any separator is stripped on input.
+ */
 export function integerMask(maxDigits = 13): InputMask {
   return {
     clean: (raw) =>
@@ -55,7 +58,7 @@ export function integerMask(maxDigits = 13): InputMask {
         .replace(/\D/g, '')
         .replace(/^0+(?=\d)/, '')
         .slice(0, maxDigits),
-    format: (clean) => (clean === '' ? '' : groupFormatter.format(Number(clean))),
+    format: (clean) => (clean === '' ? '' : formatFull(Number(clean), 'count')),
   };
 }
 

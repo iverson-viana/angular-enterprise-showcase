@@ -1,27 +1,27 @@
 <header>
-  <nav aria-label="Breadcrumb" class="text-sm">
+  <nav [attr.aria-label]="'common.breadcrumb' | t" class="text-sm">
     <ol class="flex items-center gap-1 text-slate-600 dark:text-slate-400">
       <li>
         <a
           routerLink="/customers"
           class="rounded font-medium text-blue-700 underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:text-blue-400 dark:focus-visible:ring-blue-400"
-          >Customers</a
+          >{{ 'pages.customers' | t }}</a
         >
       </li>
       <li aria-hidden="true"><app-icon name="chevronRight" class="size-4" /></li>
-      <li aria-current="page">{{ isEdit() ? 'Edit customer' : 'New customer' }}</li>
+      <li aria-current="page">{{ title() | t }}</li>
     </ol>
   </nav>
   <h1 class="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
-    {{ isEdit() ? 'Edit customer' : 'New customer' }}
+    {{ title() | t }}
   </h1>
   <p class="mt-1 text-slate-600 dark:text-slate-300">
     @if (details(); as saved) {
       {{ saved.legalName }} · {{ saved.id }}.
     } @else if (!isEdit()) {
-      Onboard a business client.
+      {{ 'customerForm.intro' | t }}
     }
-    Every field is required unless marked optional.
+    {{ 'customerForm.allRequired' | t }}
   </p>
 </header>
 
@@ -31,26 +31,26 @@
     class="mt-6 max-w-3xl rounded-lg border border-red-200 bg-red-50 p-5 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
   >
     @if (notFound()) {
-      <p class="font-medium">This customer doesn't exist.</p>
+      <p class="font-medium">{{ 'customerForm.notFound' | t }}</p>
       <a
         routerLink="/customers"
         class="mt-3 inline-block rounded font-medium underline underline-offset-2 hover:no-underline focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:outline-none"
-        >Back to customers</a
+        >{{ 'customerForm.backToCustomers' | t }}</a
       >
     } @else {
-      <p class="font-medium">We couldn't load this customer.</p>
+      <p class="font-medium">{{ 'customerForm.loadError' | t }}</p>
       <button
         type="button"
         (click)="retryLoad()"
         class="mt-3 rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-800 focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:ring-offset-2 focus-visible:outline-none dark:focus-visible:ring-offset-red-950"
       >
-        Try again
+        {{ 'common.tryAgain' | t }}
       </button>
     }
   </div>
 } @else if (isEdit() && !details()) {
   <div aria-busy="true" class="mt-6 max-w-3xl space-y-6">
-    <span class="sr-only">Loading customer…</span>
+    <span class="sr-only">{{ 'customerForm.loading' | t }}</span>
     @for (i of [1, 2, 3]; track i) {
       <div
         aria-hidden="true"
@@ -70,11 +70,7 @@
           class="rounded-lg border-2 border-red-700 bg-red-50 p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:ring-offset-2 dark:border-red-400 dark:bg-red-950 dark:focus-visible:ring-red-400 dark:focus-visible:ring-offset-slate-950"
         >
           <h2 id="error-summary-title" class="font-semibold text-red-800 dark:text-red-200">
-            {{
-              items.length === 1
-                ? 'There is 1 problem with this form'
-                : 'There are ' + items.length + ' problems with this form'
-            }}
+            {{ 'customerForm.summary' | t: { count: items.length } }}
           </h2>
           <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-red-800 dark:text-red-200">
             @for (item of items; track $index) {
@@ -97,15 +93,17 @@
     <fieldset
       class="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
     >
-      <legend class="px-1 text-base font-semibold text-slate-900 dark:text-white">Company</legend>
+      <legend class="px-1 text-base font-semibold text-slate-900 dark:text-white">
+        {{ 'customerForm.company' | t }}
+      </legend>
       <div class="grid gap-5 sm:grid-cols-2">
         <app-form-field
           #fLegalName
           class="sm:col-span-2"
-          label="Legal name"
+          [label]="'customerForm.legalName' | t"
           controlId="legal-name"
-          hint="As registered with the authorities."
-          pendingLabel="Checking that this company isn't a customer already…"
+          [hint]="'customerForm.legalNameHint' | t"
+          [pendingLabel]="'customerForm.legalNamePending' | t"
           [field]="customerForm.company.legalName"
         >
           <input
@@ -121,7 +119,7 @@
 
         <app-form-field
           #fSegment
-          label="Segment"
+          [label]="'customers.segment' | t"
           controlId="segment"
           [field]="customerForm.company.segment"
         >
@@ -132,8 +130,8 @@
             [attr.aria-describedby]="fSegment.describedBy()"
             [attr.aria-invalid]="fSegment.showError()"
           >
-            <option value="">Choose a segment</option>
-            @for (option of segmentOptions; track option.value) {
+            <option value="">{{ 'customerForm.segmentPlaceholder' | t }}</option>
+            @for (option of segmentOptions(); track option.value) {
               <option [value]="option.value">{{ option.label }}</option>
             }
           </select>
@@ -141,9 +139,9 @@
 
         <app-form-field
           #fCountry
-          label="Country"
+          [label]="'customers.country' | t"
           controlId="country"
-          hint="Where the company is incorporated."
+          [hint]="'customerForm.countryHint' | t"
           [field]="customerForm.company.country"
         >
           <select
@@ -154,8 +152,8 @@
             [attr.aria-invalid]="fCountry.showError()"
             (change)="onCountryChange()"
           >
-            <option value="">Choose a country</option>
-            @for (option of countryOptions; track option.value) {
+            <option value="">{{ 'customerForm.countryPlaceholder' | t }}</option>
+            @for (option of countryOptions(); track option.value) {
               <option [value]="option.value">{{ option.label }}</option>
             }
           </select>
@@ -165,7 +163,7 @@
           #fTaxId
           class="sm:col-span-2"
           controlId="tax-id"
-          [label]="taxIdRule()?.label ?? 'Tax ID'"
+          [label]="taxIdLabel()"
           [hint]="taxIdHint()"
           [field]="customerForm.company.taxId"
         >
@@ -184,15 +182,15 @@
       class="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
     >
       <legend class="px-1 text-base font-semibold text-slate-900 dark:text-white">
-        Settlement account
+        {{ 'customerForm.settlement' | t }}
       </legend>
       <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
-        Must be held in the company's country.
+        {{ 'customerForm.settlementHint' | t }}
       </p>
       @if (!customerForm.banking.iban().hidden()) {
         <app-form-field
           #fIban
-          label="IBAN"
+          [label]="'customerForm.iban' | t"
           controlId="iban"
           [hint]="ibanHint()"
           [field]="customerForm.banking.iban"
@@ -208,9 +206,9 @@
         <div class="grid gap-5 sm:grid-cols-2">
           <app-form-field
             #fRouting
-            label="Routing number (ABA)"
+            [label]="'customerForm.routing' | t"
             controlId="routing-number"
-            hint="9 digits, for example 123456780."
+            [hint]="'customerForm.routingHint' | t"
             [field]="customerForm.banking.routingNumber"
           >
             <app-masked-input
@@ -223,9 +221,9 @@
           </app-form-field>
           <app-form-field
             #fAccount
-            label="Account number"
+            [label]="'customerForm.account' | t"
             controlId="account-number"
-            hint="4 to 17 digits."
+            [hint]="'customerForm.accountHint' | t"
             [field]="customerForm.banking.accountNumber"
           >
             <app-masked-input
@@ -244,13 +242,15 @@
     <fieldset
       class="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
     >
-      <legend class="px-1 text-base font-semibold text-slate-900 dark:text-white">Limits</legend>
+      <legend class="px-1 text-base font-semibold text-slate-900 dark:text-white">
+        {{ 'customerForm.limits' | t }}
+      </legend>
       <div class="grid gap-5 sm:grid-cols-2">
         <app-form-field
           #fVolume
-          label="Expected monthly volume"
+          [label]="'customerForm.monthlyVolume' | t"
           controlId="monthly-volume"
-          [hint]="volumeHint"
+          [hint]="volumeHint()"
           [field]="customerForm.banking.monthlyVolume"
         >
           <app-amount-input
@@ -261,7 +261,7 @@
         </app-form-field>
         <app-form-field
           #fCredit
-          label="Credit limit"
+          [label]="'customerForm.creditLimit' | t"
           controlId="credit-limit"
           [optional]="true"
           [hint]="creditHint()"
@@ -281,10 +281,10 @@
       class="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
     >
       <legend class="px-1 text-base font-semibold text-slate-900 dark:text-white">
-        Authorized signatories
+        {{ 'customerForm.signatories' | t }}
       </legend>
       <p class="text-sm text-slate-600 dark:text-slate-400">
-        People who can approve payments, up to {{ maxSignatories }}.
+        {{ 'customerForm.signatoriesHint' | t: { max: maxSignatories } }}
       </p>
 
       <ol class="mt-4 space-y-4">
@@ -292,12 +292,12 @@
           <li>
             <fieldset class="rounded-md border border-slate-200 p-4 dark:border-slate-700">
               <legend class="px-1 text-sm font-medium text-slate-700 dark:text-slate-300">
-                Signatory {{ i + 1 }}
+                {{ 'customerForm.signatory' | t: { n: i + 1 } }}
               </legend>
               <div class="grid items-start gap-4 sm:grid-cols-[1fr_1fr_auto]">
                 <app-form-field
                   #fName
-                  label="Full name"
+                  [label]="'customerForm.fullName' | t"
                   [controlId]="'signatory-' + i + '-name'"
                   [field]="signatory.name"
                 >
@@ -313,7 +313,7 @@
                 </app-form-field>
                 <app-form-field
                   #fEmail
-                  label="Email"
+                  [label]="'customerForm.email' | t"
                   [controlId]="'signatory-' + i + '-email'"
                   [field]="signatory.email"
                 >
@@ -331,11 +331,11 @@
                   <button
                     type="button"
                     class="inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:outline-none sm:mt-6 dark:text-red-400 dark:hover:bg-slate-800 dark:focus-visible:ring-red-400"
-                    [attr.aria-label]="'Remove signatory ' + (i + 1)"
+                    [attr.aria-label]="'customerForm.removeLabel' | t: { n: i + 1 }"
                     (click)="removeSignatory(i)"
                   >
                     <app-icon name="trash" class="size-4" />
-                    <span aria-hidden="true">Remove</span>
+                    <span aria-hidden="true">{{ 'customerForm.remove' | t }}</span>
                   </button>
                 }
               </div>
@@ -352,7 +352,7 @@
         (click)="addSignatory()"
       >
         <app-icon name="plus" class="size-4" />
-        Add signatory
+        {{ 'customerForm.addSignatory' | t }}
       </button>
     </fieldset>
 
@@ -370,8 +370,7 @@
           [attr.aria-describedby]="kycError ? 'kyc-error' : null"
         />
         <label for="kyc" class="text-sm text-slate-800 dark:text-slate-200">
-          I confirm the KYC documents (incorporation, ownership structure and signatory IDs) were
-          verified.
+          {{ 'customerForm.kyc' | t }}
         </label>
       </div>
       @if (kycError) {
@@ -390,7 +389,7 @@
         role="alert"
         class="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
       >
-        {{ message }}
+        {{ message | t }}
       </p>
     }
 
@@ -401,7 +400,7 @@
         routerLink="/customers"
         class="rounded-md px-4 py-2 text-center font-medium text-slate-700 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:text-slate-300 dark:hover:bg-slate-800 dark:focus-visible:ring-blue-400"
       >
-        Cancel
+        {{ 'common.cancel' | t }}
       </a>
       <button
         type="submit"
@@ -410,9 +409,9 @@
         [attr.aria-busy]="customerForm().submitting()"
       >
         @if (isEdit()) {
-          {{ customerForm().submitting() ? 'Saving…' : 'Save changes' }}
+          {{ (customerForm().submitting() ? 'customerForm.saving' : 'customerForm.save') | t }}
         } @else {
-          {{ customerForm().submitting() ? 'Creating customer…' : 'Create customer' }}
+          {{ (customerForm().submitting() ? 'customerForm.creating' : 'customerForm.create') | t }}
         }
       </button>
     </div>

@@ -1,21 +1,23 @@
 @let f = filters();
 
 <header>
-  <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">Transactions</h1>
+  <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">
+    {{ 'pages.transactions' | t }}
+  </h1>
   <p class="mt-1 text-slate-600 dark:text-slate-300">
-    All booked payments, newest first. Scroll to load more.
+    {{ 'transactions.subtitle' | t }}
   </p>
 </header>
 
 <form
   role="search"
-  aria-label="Filter transactions"
+  [attr.aria-label]="'transactions.filterLabel' | t"
   class="mt-6 flex flex-wrap items-end gap-3"
   (submit)="$event.preventDefault()"
 >
   <div class="w-full sm:w-72">
     <label for="tx-search" class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-      Search
+      {{ 'common.search' | t }}
     </label>
     <div class="relative mt-1">
       <app-icon
@@ -25,7 +27,7 @@
       <input
         id="tx-search"
         type="search"
-        placeholder="Customer, reference or ID"
+        [placeholder]="'transactions.searchPlaceholder' | t"
         autocomplete="off"
         [value]="searchText()"
         (input)="onSearchInput($event)"
@@ -34,7 +36,7 @@
     </div>
   </div>
 
-  @for (control of filterControls; track control.key) {
+  @for (control of filterControls(); track control.key) {
     <div>
       <label
         [for]="'tx-filter-' + control.key"
@@ -47,7 +49,7 @@
         (change)="onFilterChange(control.key, $event)"
         class="mt-1 block rounded-md border border-slate-300 bg-white py-2 pr-8 pl-3 text-sm text-slate-900 focus:border-blue-700 focus:ring-2 focus:ring-blue-700 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-400"
       >
-        <option value="" [selected]="f[control.key] === null">All</option>
+        <option value="" [selected]="f[control.key] === null">{{ 'common.all' | t }}</option>
         @for (option of control.options; track option.value) {
           <option [value]="option.value" [selected]="f[control.key] === option.value">
             {{ option.label }}
@@ -63,7 +65,7 @@
       (click)="clearFilters()"
       class="rounded-md px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:text-blue-400 dark:hover:bg-slate-800 dark:focus-visible:ring-blue-400"
     >
-      Clear filters
+      {{ 'common.clearFilters' | t }}
     </button>
   }
 </form>
@@ -79,7 +81,7 @@
     -->
     <div
       role="table"
-      aria-label="Transactions"
+      [attr.aria-label]="'pages.transactions' | t"
       [attr.aria-rowcount]="(store.total() ?? 0) + 1"
       class="min-w-[52rem] text-sm"
     >
@@ -89,11 +91,11 @@
           aria-rowindex="1"
           class="grid grid-cols-[11rem_minmax(14rem,1fr)_6rem_8rem_10rem] items-center border-b border-slate-200 px-4 py-3 font-medium text-slate-600 dark:border-slate-800 dark:text-slate-300"
         >
-          <span role="columnheader">Date</span>
-          <span role="columnheader">Customer · Reference</span>
-          <span role="columnheader">Method</span>
-          <span role="columnheader">Status</span>
-          <span role="columnheader" class="text-right">Amount</span>
+          <span role="columnheader">{{ 'transactions.date' | t }}</span>
+          <span role="columnheader">{{ 'transactions.customerReference' | t }}</span>
+          <span role="columnheader">{{ 'transactions.method' | t }}</span>
+          <span role="columnheader">{{ 'transactions.status' | t }}</span>
+          <span role="columnheader" class="text-right">{{ 'transactions.amount' | t }}</span>
         </div>
       </div>
 
@@ -109,20 +111,20 @@
         </div>
       } @else if (store.hasError() && store.items().length === 0) {
         <div role="alert" class="px-4 py-12 text-center text-red-800 dark:text-red-200">
-          <p class="font-medium">We couldn't load transactions.</p>
+          <p class="font-medium">{{ 'transactions.loadError' | t }}</p>
           <button
             type="button"
             (click)="store.loadMore()"
             class="mt-3 rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-800 focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:ring-offset-2 focus-visible:outline-none dark:focus-visible:ring-offset-slate-900"
           >
-            Try again
+            {{ 'common.tryAgain' | t }}
           </button>
         </div>
       } @else if (store.total() === 0) {
         <div class="px-4 py-12 text-center">
-          <p class="font-medium text-slate-900 dark:text-white">No transactions found</p>
+          <p class="font-medium text-slate-900 dark:text-white">{{ 'transactions.empty' | t }}</p>
           <p class="mt-1 text-slate-600 dark:text-slate-300">
-            Try a different search or remove some filters.
+            {{ 'common.noResultsHint' | t }}
           </p>
         </div>
       } @else {
@@ -178,19 +180,19 @@
     <p aria-live="polite">{{ summary() }}</p>
     @if (store.hasError() && store.items().length > 0) {
       <p role="alert" class="flex items-center gap-2 text-red-700 dark:text-red-400">
-        Couldn't load more.
+        {{ 'transactions.loadMoreError' | t }}
         <button
           type="button"
           (click)="store.loadMore()"
           class="rounded font-medium underline focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none"
         >
-          Retry
+          {{ 'transactions.retry' | t }}
         </button>
       </p>
     } @else if (store.isLoading() && store.items().length > 0) {
-      <p>Loading more…</p>
+      <p>{{ 'transactions.loadingMore' | t }}</p>
     } @else if (!store.hasMore() && store.items().length > 0) {
-      <p>End of results</p>
+      <p>{{ 'transactions.end' | t }}</p>
     }
   </div>
 </div>

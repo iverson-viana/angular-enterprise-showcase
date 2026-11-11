@@ -2,15 +2,16 @@ import { Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
 import { AuthService } from '../core/auth/auth.service';
+import { TranslatePipe } from '../core/i18n/translate.pipe';
 import { Icon } from '../shared/ui/icon';
 import { NAV_ITEMS } from './nav-items';
 
 /** Main navigation, filtered by the signed-in user's role. */
 @Component({
   selector: 'app-sidebar-nav',
-  imports: [RouterLink, RouterLinkActive, Icon],
+  imports: [RouterLink, RouterLinkActive, Icon, TranslatePipe],
   template: `
-    <nav aria-label="Main">
+    <nav [attr.aria-label]="'shell.mainNav' | t">
       <ul class="space-y-1">
         @for (item of items(); track item.path) {
           <li>
@@ -22,7 +23,7 @@ import { NAV_ITEMS } from './nav-items';
               class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white dark:focus-visible:ring-blue-400"
             >
               <app-icon [name]="item.icon" />
-              {{ item.label }}
+              {{ item.labelKey | t }}
             </a>
           </li>
         }

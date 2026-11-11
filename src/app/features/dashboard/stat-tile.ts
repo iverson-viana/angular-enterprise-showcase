@@ -1,5 +1,6 @@
 import { Component, computed, input } from '@angular/core';
 
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { Icon } from '../../shared/ui/icon';
 import {
   formatCompact,
@@ -7,6 +8,7 @@ import {
   formatSignedPercent,
   relativeChange,
 } from '../../shared/utils/format';
+import type { MessageKey } from '../../core/i18n/translate';
 import type { Kpi } from './dashboard.models';
 
 type Tone = 'good' | 'bad' | 'neutral';
@@ -20,9 +22,9 @@ const TONE_CLASSES: Record<Tone, string> = {
 /** KPI stat tile: label · value · delta vs the previous period (direction × whether up is good). */
 @Component({
   selector: 'app-stat-tile',
-  imports: [Icon],
+  imports: [Icon, TranslatePipe],
   template: `
-    <h2 class="text-sm font-medium text-slate-600 dark:text-slate-300">{{ kpi().label }}</h2>
+    <h2 class="text-sm font-medium text-slate-600 dark:text-slate-300">{{ labelKey() | t }}</h2>
     <p class="mt-2 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
       <data [value]="kpi().value" [title]="fullValue()">{{ compactValue() }}</data>
     </p>
@@ -33,16 +35,14 @@ const TONE_CLASSES: Record<Tone, string> = {
             <app-icon [name]="d.direction === 'up' ? 'arrowUp' : 'arrowDown'" class="size-4" />
           }
           {{ d.label }}
-          <span class="sr-only"
-            >({{
-              d.tone === 'neutral' ? 'no change' : d.tone === 'good' ? 'favorable' : 'unfavorable'
-            }})</span
-          >
+          <span class="sr-only">({{ toneKey() | t }})</span>
         </span>
       } @else {
         <span class="font-medium text-slate-600 dark:text-slate-300">—</span>
       }
-      <span class="text-slate-600 dark:text-slate-300">vs previous {{ periodLabel() }}</span>
+      <span class="text-slate-600 dark:text-slate-300">{{
+        'dashboard.vsPrevious' | t: { period: periodLabel() }
+      }}</span>
     </p>
   `,
   host: {
@@ -69,6 +69,17 @@ export class StatTile {
     const tone: Tone =
       direction === 'flat' ? 'neutral' : change > 0 === higherIsBetter ? 'good' : 'bad';
     return { direction, tone, label: formatSignedPercent(change) } as const;
+  });
+
+  /** Translated by id: the API's English label is not shown. */
+  protected readonly labelKey = computed<MessageKey>(() => `dashboard.kpis.${this.kpi().id}`);
+  protected readonly toneKey = computed<MessageKey>(() => {
+    const tone = this.delta()?.tone ?? 'neutral';
+    return tone === 'neutral'
+      ? 'dashboard.noChange'
+      : tone === 'good'
+        ? 'dashboard.favorable'
+        : 'dashboard.unfavorable';
   });
 
   protected readonly toneClass = computed(() => TONE_CLASSES[this.delta()?.tone ?? 'neutral']);

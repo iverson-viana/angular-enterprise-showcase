@@ -8,6 +8,7 @@ import { inject } from '@angular/core';
 import { catchError, switchMap, throwError } from 'rxjs';
 
 import { AUTH_API, AuthService } from '../auth/auth.service';
+import { I18n } from '../i18n/i18n.service';
 import { ToastService } from '../notifications/toast.service';
 
 /** Endpoints that must never carry a bearer token nor trigger a refresh loop. */
@@ -28,6 +29,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next: HttpHandlerFn) => 
 
   const auth = inject(AuthService);
   const toasts = inject(ToastService);
+  const i18n = inject(I18n);
 
   return next(withBearer(req, auth.getAccessToken())).pipe(
     catchError((error: unknown) => {
@@ -40,7 +42,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next: HttpHandlerFn) => 
           toasts.show({
             key: 'session-expired',
             tone: 'warning',
-            message: 'Your session expired. Please sign in again.',
+            message: i18n.t('errors.sessionExpired'),
           });
           return throwError(() => refreshError);
         }),

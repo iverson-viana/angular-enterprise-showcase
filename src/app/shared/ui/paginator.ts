@@ -1,6 +1,8 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
 
-import { formatFull } from '../utils/format';
+import { I18n } from '../../core/i18n/i18n.service';
+import type { MessageKey } from '../../core/i18n/translate';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { Icon, type IconName } from './icon';
 
 const NAV_BUTTON =
@@ -9,21 +11,19 @@ const NAV_BUTTON =
 /** Server-side pagination controls. Stateless: emits intents, the parent owns the state. */
 @Component({
   selector: 'app-paginator',
-  imports: [Icon],
+  imports: [Icon, TranslatePipe],
   template: `
     <p class="text-sm text-slate-600 dark:text-slate-300" aria-live="polite">
       @if (total() === 0) {
-        No results
+        {{ 'paginator.noResults' | t }}
       } @else {
-        Showing <span class="font-medium text-slate-900 dark:text-white">{{ range().from }}</span
-        >–<span class="font-medium text-slate-900 dark:text-white">{{ range().to }}</span> of
-        <span class="font-medium text-slate-900 dark:text-white">{{ range().total }}</span>
+        {{ 'paginator.showing' | t: range() }}
       }
     </p>
 
     <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
       <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-        Rows per page
+        {{ 'paginator.rowsPerPage' | t }}
         <select
           class="rounded-md border border-slate-300 bg-white py-1 pr-8 pl-2 text-sm text-slate-900 focus:border-blue-700 focus:ring-2 focus:ring-blue-700 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white"
           (change)="onPageSizeChange($event)"
@@ -35,15 +35,15 @@ const NAV_BUTTON =
       </label>
 
       <span class="text-sm text-slate-600 dark:text-slate-300">
-        Page {{ page() }} of {{ lastPage() }}
+        {{ 'paginator.pageOf' | t: { page: page(), last: lastPage() } }}
       </span>
 
       <div class="flex gap-1">
-        @for (b of buttons(); track b.label) {
+        @for (b of buttons(); track b.labelKey) {
           <button
             type="button"
             class="${NAV_BUTTON}"
-            [attr.aria-label]="b.label"
+            [attr.aria-label]="b.labelKey | t"
             [disabled]="b.disabled"
             (click)="pageChange.emit(b.target)"
           >
@@ -55,7 +55,7 @@ const NAV_BUTTON =
   `,
   host: {
     role: 'navigation',
-    'aria-label': 'Pagination',
+    '[attr.aria-label]': 'navLabel()',
     class: 'flex flex-wrap items-center justify-between gap-3',
   },
 })
@@ -73,30 +73,30 @@ export class Paginator {
     Math.max(1, Math.ceil(this.total() / this.pageSize())),
   );
 
-  protected readonly range = computed(() => {
-    const from = (this.page() - 1) * this.pageSize() + 1;
-    const to = Math.min(this.page() * this.pageSize(), this.total());
-    return {
-      from: formatFull(from, 'count'),
-      to: formatFull(to, 'count'),
-      total: formatFull(this.total(), 'count'),
-    };
-  });
+  private readonly i18n = inject(I18n);
+  protected readonly navLabel = computed(() => this.i18n.t('paginator.label'));
+
+  /** Numbers are interpolated by the translator, formatted for the active locale. */
+  protected readonly range = computed(() => ({
+    from: (this.page() - 1) * this.pageSize() + 1,
+    to: Math.min(this.page() * this.pageSize(), this.total()),
+    total: this.total(),
+  }));
 
   protected readonly buttons = computed(() => {
     const page = this.page();
     const last = this.lastPage();
-    const button = (label: string, icon: IconName, target: number, disabled: boolean) => ({
-      label,
+    const button = (labelKey: MessageKey, icon: IconName, target: number, disabled: boolean) => ({
+      labelKey,
       icon,
       target,
       disabled,
     });
     return [
-      button('First page', 'chevronDoubleLeft', 1, page <= 1),
-      button('Previous page', 'chevronLeft', page - 1, page <= 1),
-      button('Next page', 'chevronRight', page + 1, page >= last),
-      button('Last page', 'chevronDoubleRight', last, page >= last),
+      button('paginator.first', 'chevronDoubleLeft', 1, page <= 1),
+      button('paginator.previous', 'chevronLeft', page - 1, page <= 1),
+      button('paginator.next', 'chevronRight', page + 1, page >= last),
+      button('paginator.last', 'chevronDoubleRight', last, page >= last),
     ];
   });
 

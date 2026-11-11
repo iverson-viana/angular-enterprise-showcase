@@ -7,7 +7,7 @@ export const CUSTOMER_COUNTRIES = ['US', 'GB', 'DE', 'BR', 'PT'] as const;
 export type CustomerCountry = (typeof CUSTOMER_COUNTRIES)[number];
 
 export interface TaxIdRule {
-  label: string;
+  /** Label lives in the dictionary: customerForm.taxIds.<country>. */
   mask: InputMask;
   /** Formatted example for the hint — invented, but passes the checksum. */
   example: string;
@@ -16,31 +16,26 @@ export interface TaxIdRule {
 
 export const TAX_ID_RULES: Record<CustomerCountry, TaxIdRule> = {
   US: {
-    label: 'EIN',
     mask: patternMask('00-0000000'),
     example: '12-3456789',
     isValid: (v) => /^\d{9}$/.test(v),
   },
   GB: {
-    label: 'Company number',
     mask: patternMask('********'),
     example: 'SC123456',
     isValid: (v) => /^(\d{8}|[A-Z]{2}\d{6})$/.test(v),
   },
   DE: {
-    label: 'VAT ID (without DE)',
     mask: patternMask('000000000'),
     example: '123456788',
     isValid: isValidDeVatId,
   },
   BR: {
-    label: 'CNPJ',
     mask: patternMask('**.***.***/****-00'),
     example: '12.ABC.345/01DE-35',
     isValid: isValidCnpj,
   },
   PT: {
-    label: 'NIPC',
     mask: patternMask('000 000 000'),
     example: '123 456 789',
     isValid: isValidPtNif,

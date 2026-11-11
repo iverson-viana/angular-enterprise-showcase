@@ -1,6 +1,8 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import type { FieldTree } from '@angular/forms/signals';
 
+import { I18n } from '../../core/i18n/i18n.service';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { Icon } from '../ui/icon';
 
 /**
@@ -18,12 +20,14 @@ import { Icon } from '../ui/icon';
  */
 @Component({
   selector: 'app-form-field',
-  imports: [Icon],
+  imports: [Icon, TranslatePipe],
   template: `
     <label [for]="controlId()" class="block text-sm font-medium text-slate-800 dark:text-slate-200">
       {{ label() }}
       @if (optional()) {
-        <span class="font-normal text-slate-600 dark:text-slate-400">(optional)</span>
+        <span class="font-normal text-slate-600 dark:text-slate-400">{{
+          'common.optional' | t
+        }}</span>
       }
     </label>
     <div class="mt-1"><ng-content /></div>
@@ -36,7 +40,7 @@ import { Icon } from '../ui/icon';
     <!-- Always rendered so async status changes are announced. -->
     <p aria-live="polite" class="text-sm text-slate-600 empty:hidden dark:text-slate-400">
       @if (state().pending()) {
-        {{ pendingLabel() }}
+        {{ pendingLabel() ?? ('common.checking' | t) }}
       }
     </p>
     @if (errorMessage(); as message) {
@@ -58,8 +62,10 @@ export class FormFieldShell<T> {
   readonly controlId = input.required<string>();
   readonly hint = input<string>();
   readonly optional = input(false);
-  readonly pendingLabel = input('Checking…');
+  /** Defaults to a generic Checking… in the active language. */
+  readonly pendingLabel = input<string>();
 
+  private readonly i18n = inject(I18n);
   protected readonly state = computed(() => this.field()());
   protected readonly hintId = computed(() => `${this.controlId()}-hint`);
   protected readonly errorId = computed(() => `${this.controlId()}-error`);
@@ -70,7 +76,9 @@ export class FormFieldShell<T> {
   });
 
   protected readonly errorMessage = computed(() =>
-    this.showError() ? (this.state().errors()[0]?.message ?? 'Enter a valid value.') : null,
+    this.showError()
+      ? (this.state().errors()[0]?.message ?? this.i18n.t('common.invalidValue'))
+      : null,
   );
 
   readonly describedBy = computed(

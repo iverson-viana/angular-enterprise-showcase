@@ -2,9 +2,11 @@
 
 <header class="flex flex-wrap items-start justify-between gap-4">
   <div>
-    <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">Customers</h1>
+    <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">
+      {{ 'pages.customers' | t }}
+    </h1>
     <p class="mt-1 text-slate-600 dark:text-slate-300">
-      Corporate clients, their risk rating and current balance.
+      {{ 'customers.subtitle' | t }}
     </p>
   </div>
   @if (canManage()) {
@@ -13,7 +15,7 @@
       class="inline-flex items-center gap-1.5 rounded-md bg-blue-700 px-4 py-2 font-medium text-white hover:bg-blue-800 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2 focus-visible:outline-none dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-slate-950"
     >
       <app-icon name="plus" class="size-5" />
-      New customer
+      {{ 'pages.newCustomer' | t }}
     </a>
   }
 </header>
@@ -21,7 +23,7 @@
 <!-- Filters: one row above the content they scope. -->
 <form
   role="search"
-  aria-label="Filter customers"
+  [attr.aria-label]="'customers.filterLabel' | t"
   class="mt-6 flex flex-wrap items-end gap-3"
   (submit)="$event.preventDefault()"
 >
@@ -30,7 +32,7 @@
       for="customer-search"
       class="block text-sm font-medium text-slate-700 dark:text-slate-300"
     >
-      Search
+      {{ 'common.search' | t }}
     </label>
     <div class="relative mt-1">
       <app-icon
@@ -40,7 +42,7 @@
       <input
         id="customer-search"
         type="search"
-        placeholder="Name or ID"
+        [placeholder]="'customers.searchPlaceholder' | t"
         autocomplete="off"
         [value]="searchText()"
         (input)="onSearchInput($event)"
@@ -49,7 +51,7 @@
     </div>
   </div>
 
-  @for (f of filters; track f.key) {
+  @for (f of filters(); track f.key) {
     <div>
       <label
         [for]="'filter-' + f.key"
@@ -62,7 +64,7 @@
         (change)="onFilterChange(f.key, $event)"
         class="mt-1 block rounded-md border border-slate-300 bg-white py-2 pr-8 pl-3 text-sm text-slate-900 focus:border-blue-700 focus:ring-2 focus:ring-blue-700 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-400"
       >
-        <option value="" [selected]="q[f.key] === null">All</option>
+        <option value="" [selected]="q[f.key] === null">{{ 'common.all' | t }}</option>
         @for (option of f.options; track option.value) {
           <option [value]="option.value" [selected]="q[f.key] === option.value">
             {{ option.label }}
@@ -78,7 +80,7 @@
       (click)="clearFilters()"
       class="rounded-md px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:text-blue-400 dark:hover:bg-slate-800 dark:focus-visible:ring-blue-400"
     >
-      Clear filters
+      {{ 'common.clearFilters' | t }}
     </button>
   }
 </form>
@@ -88,13 +90,13 @@
     role="alert"
     class="mt-6 rounded-lg border border-red-200 bg-red-50 p-5 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
   >
-    <p class="font-medium">We couldn't load customers.</p>
+    <p class="font-medium">{{ 'customers.loadError' | t }}</p>
     <button
       type="button"
       (click)="retry()"
       class="mt-3 rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-800 focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:ring-offset-2 focus-visible:outline-none dark:focus-visible:ring-offset-red-950"
     >
-      Try again
+      {{ 'common.tryAgain' | t }}
     </button>
   </div>
 } @else {
@@ -126,13 +128,13 @@
                 class="inline-flex items-center gap-1 rounded font-medium hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:hover:text-white dark:focus-visible:ring-blue-400"
                 (click)="sortBy('name')"
               >
-                Customer <app-icon [name]="sortIcon('name')" class="size-4" />
+                {{ 'customers.customer' | t }} <app-icon [name]="sortIcon('name')" class="size-4" />
               </button>
             </th>
-            <th scope="col" class="px-4 py-3 font-medium">Segment</th>
-            <th scope="col" class="px-4 py-3 font-medium">Country</th>
-            <th scope="col" class="px-4 py-3 font-medium">Risk</th>
-            <th scope="col" class="px-4 py-3 font-medium">Status</th>
+            <th scope="col" class="px-4 py-3 font-medium">{{ 'customers.segment' | t }}</th>
+            <th scope="col" class="px-4 py-3 font-medium">{{ 'customers.country' | t }}</th>
+            <th scope="col" class="px-4 py-3 font-medium">{{ 'customers.risk' | t }}</th>
+            <th scope="col" class="px-4 py-3 font-medium">{{ 'customers.status' | t }}</th>
             <th
               scope="col"
               class="px-4 py-3 text-right font-medium"
@@ -143,7 +145,8 @@
                 class="ml-auto inline-flex items-center gap-1 rounded font-medium hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:hover:text-white dark:focus-visible:ring-blue-400"
                 (click)="sortBy('balance')"
               >
-                Balance <app-icon [name]="sortIcon('balance')" class="size-4" />
+                {{ 'customers.balance' | t }}
+                <app-icon [name]="sortIcon('balance')" class="size-4" />
               </button>
             </th>
             <th
@@ -156,11 +159,14 @@
                 class="inline-flex items-center gap-1 rounded font-medium hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:hover:text-white dark:focus-visible:ring-blue-400"
                 (click)="sortBy('lastActivity')"
               >
-                Last activity <app-icon [name]="sortIcon('lastActivity')" class="size-4" />
+                {{ 'customers.lastActivity' | t }}
+                <app-icon [name]="sortIcon('lastActivity')" class="size-4" />
               </button>
             </th>
             @if (canManage()) {
-              <th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
+              <th scope="col" class="px-4 py-3">
+                <span class="sr-only">{{ 'customers.actions' | t }}</span>
+              </th>
             }
           </tr>
         </thead>
@@ -200,9 +206,9 @@
                   <td class="px-4 py-2 text-right">
                     <a
                       [routerLink]="[c.id, 'edit']"
-                      [attr.aria-label]="'Edit ' + c.name"
+                      [attr.aria-label]="'customers.editLabel' | t: { name: c.name }"
                       class="rounded-md px-2 py-1 font-medium text-blue-700 hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:text-blue-400 dark:hover:bg-slate-800 dark:focus-visible:ring-blue-400"
-                      >Edit</a
+                      >{{ 'customers.edit' | t }}</a
                     >
                   </td>
                 }
@@ -210,9 +216,11 @@
             } @empty {
               <tr>
                 <td [attr.colspan]="columnCount()" class="px-4 py-12 text-center">
-                  <p class="font-medium text-slate-900 dark:text-white">No customers found</p>
+                  <p class="font-medium text-slate-900 dark:text-white">
+                    {{ 'customers.empty' | t }}
+                  </p>
                   <p class="mt-1 text-slate-600 dark:text-slate-300">
-                    Try a different search or remove some filters.
+                    {{ 'common.noResultsHint' | t }}
                   </p>
                   @if (hasActiveFilters()) {
                     <button
@@ -220,7 +228,7 @@
                       (click)="clearFilters()"
                       class="mt-3 rounded-md px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:text-blue-400 dark:hover:bg-slate-800"
                     >
-                      Clear filters
+                      {{ 'common.clearFilters' | t }}
                     </button>
                   }
                 </td>

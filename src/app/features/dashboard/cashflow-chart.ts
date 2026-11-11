@@ -10,6 +10,9 @@ import {
   viewChild,
 } from '@angular/core';
 
+import { I18n } from '../../core/i18n/i18n.service';
+import type { MessageKey } from '../../core/i18n/translate';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { formatCompact, formatFull, formatMonth } from '../../shared/utils/format';
 import { niceTicks } from './chart-scale';
 import type { CashflowPoint } from './dashboard.models';
@@ -23,7 +26,7 @@ const MIN_END_LABEL_GAP = 16;
 
 interface Series {
   key: 'inflow' | 'outflow';
-  label: string;
+  labelKey: MessageKey;
   /** Tailwind classes bound to the validated data-viz tokens in styles.css. */
   strokeClass: string;
   fillClass: string;
@@ -33,14 +36,14 @@ interface Series {
 const SERIES: readonly Series[] = [
   {
     key: 'inflow',
-    label: 'Inflow',
+    labelKey: 'chart.inflow',
     strokeClass: 'stroke-(--viz-series-1)',
     fillClass: 'fill-(--viz-series-1)',
     keyClass: 'bg-(--viz-series-1)',
   },
   {
     key: 'outflow',
-    label: 'Outflow',
+    labelKey: 'chart.outflow',
     strokeClass: 'stroke-(--viz-series-2)',
     fillClass: 'fill-(--viz-series-2)',
     keyClass: 'bg-(--viz-series-2)',
@@ -53,11 +56,13 @@ const SERIES: readonly Series[] = [
  */
 @Component({
   selector: 'app-cashflow-chart',
+  imports: [TranslatePipe],
   templateUrl: './cashflow-chart.html',
   host: { class: 'block' },
 })
 export class CashflowChart {
   readonly points = input.required<CashflowPoint[]>();
+  private readonly i18n = inject(I18n);
 
   protected readonly series = SERIES;
   protected readonly height = HEIGHT;
@@ -140,7 +145,7 @@ export class CashflowChart {
   protected readonly liveText = computed(() => {
     const active = this.active();
     return active
-      ? `${active.month}: ${active.rows.map((r) => `${r.label} ${r.value}`).join(', ')}`
+      ? `${active.month}: ${active.rows.map((r) => `${this.i18n.t(r.labelKey)} ${r.value}`).join(', ')}`
       : '';
   });
 

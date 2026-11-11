@@ -2,6 +2,9 @@ import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import { Component, computed, inject, output } from '@angular/core';
 
 import { AuthService } from '../core/auth/auth.service';
+import { I18n } from '../core/i18n/i18n.service';
+import { LocaleSwitcher } from '../core/i18n/locale-switcher';
+import { TranslatePipe } from '../core/i18n/translate.pipe';
 import { ToastService } from '../core/notifications/toast.service';
 import { ThemeService } from '../core/theme/theme.service';
 import { Icon } from '../shared/ui/icon';
@@ -11,7 +14,7 @@ const ICON_BUTTON =
 
 @Component({
   selector: 'app-topbar',
-  imports: [CdkMenu, CdkMenuItem, CdkMenuTrigger, Icon],
+  imports: [CdkMenu, CdkMenuItem, CdkMenuTrigger, Icon, LocaleSwitcher, TranslatePipe],
   template: `
     <header
       class="sticky top-0 z-10 flex h-16 items-center gap-2 border-b border-slate-200 bg-white/90 px-4 backdrop-blur sm:px-6 lg:px-8 dark:border-slate-800 dark:bg-slate-900/90"
@@ -19,7 +22,7 @@ const ICON_BUTTON =
       <button
         type="button"
         class="${ICON_BUTTON} -ml-2 lg:hidden"
-        aria-label="Open navigation"
+        [attr.aria-label]="'shell.openNavigation' | t"
         (click)="menuClick.emit()"
       >
         <app-icon name="menu" />
@@ -27,10 +30,12 @@ const ICON_BUTTON =
 
       <div class="flex-1"></div>
 
+      <app-locale-switcher />
+
       <button
         type="button"
         class="${ICON_BUTTON}"
-        aria-label="Dark theme"
+        [attr.aria-label]="'shell.darkTheme' | t"
         [attr.aria-pressed]="theme.isDark()"
         (click)="theme.toggle()"
       >
@@ -52,7 +57,7 @@ const ICON_BUTTON =
           <span class="hidden font-medium text-slate-800 sm:inline dark:text-slate-100">
             {{ user.name }}
           </span>
-          <span class="sr-only sm:hidden">Account menu for {{ user.name }}</span>
+          <span class="sr-only sm:hidden">{{ 'shell.accountMenu' | t: { name: user.name } }}</span>
           <app-icon name="chevronDown" class="size-4 text-slate-500 dark:text-slate-400" />
         </button>
 
@@ -66,8 +71,8 @@ const ICON_BUTTON =
                 {{ user.name }}
               </p>
               <p class="truncate text-sm text-slate-600 dark:text-slate-300">{{ user.email }}</p>
-              <p class="mt-1 text-xs text-slate-600 capitalize dark:text-slate-300">
-                Role: {{ user.role }}
+              <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                {{ 'shell.role' | t: { role: roleLabel() } }}
               </p>
             </div>
             <button
@@ -77,7 +82,7 @@ const ICON_BUTTON =
               class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 focus:bg-slate-100 focus:outline-none dark:text-slate-200 dark:hover:bg-slate-700 dark:focus:bg-slate-700"
             >
               <app-icon name="logout" class="size-4" />
-              Sign out
+              {{ 'shell.signOut' | t }}
             </button>
           </div>
         </ng-template>
@@ -89,6 +94,7 @@ export class Topbar {
   protected readonly auth = inject(AuthService);
   protected readonly theme = inject(ThemeService);
   private readonly toasts = inject(ToastService);
+  private readonly i18n = inject(I18n);
 
   readonly menuClick = output();
 
@@ -103,8 +109,13 @@ export class Topbar {
         .toUpperCase() ?? '',
   );
 
+  protected readonly roleLabel = computed(() => {
+    const role = this.auth.user()?.role;
+    return role ? this.i18n.t(`roles.${role}`) : '';
+  });
+
   protected signOut(): void {
     this.auth.logout();
-    this.toasts.show({ tone: 'success', message: "You've been signed out." });
+    this.toasts.show({ tone: 'success', message: this.i18n.t('shell.signedOut') });
   }
 }

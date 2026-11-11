@@ -2,6 +2,7 @@ import { HttpContextToken, HttpErrorResponse, type HttpInterceptorFn } from '@an
 import { inject } from '@angular/core';
 import { catchError, throwError } from 'rxjs';
 
+import { I18n } from '../i18n/i18n.service';
 import { ToastService } from '../notifications/toast.service';
 
 /** Set on a request to suppress global error toasts for it. */
@@ -16,6 +17,7 @@ export const SILENT_HTTP_ERRORS = new HttpContextToken<boolean>(() => false);
  */
 export const errorNotificationInterceptor: HttpInterceptorFn = (req, next) => {
   const toasts = inject(ToastService);
+  const i18n = inject(I18n);
 
   return next(req).pipe(
     catchError((error: unknown) => {
@@ -24,13 +26,13 @@ export const errorNotificationInterceptor: HttpInterceptorFn = (req, next) => {
           toasts.show({
             key: 'network-error',
             tone: 'error',
-            message: "Can't reach the server. Check your connection and try again.",
+            message: i18n.t('errors.network'),
           });
         } else if (error.status === 403) {
           toasts.show({
             key: 'forbidden',
             tone: 'warning',
-            message: "You don't have permission to do that.",
+            message: i18n.t('errors.forbidden'),
           });
         }
       }

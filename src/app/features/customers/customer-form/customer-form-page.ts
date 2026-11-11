@@ -22,6 +22,9 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
+import { I18n } from '../../../core/i18n/i18n.service';
+import type { MessageKey } from '../../../core/i18n/translate';
+import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 import type { HasUnsavedChanges } from '../../../core/navigation/unsaved-changes.guard';
 import { ToastService } from '../../../core/notifications/toast.service';
 import { AmountInput } from '../../../shared/forms/amount-input';
@@ -29,7 +32,7 @@ import { FormFieldShell } from '../../../shared/forms/form-field-shell';
 import { MaskedInput } from '../../../shared/forms/masked-input';
 import { Icon } from '../../../shared/ui/icon';
 import { countryName, formatFull } from '../../../shared/utils/format';
-import { type Customer, SEGMENT_LABELS, SEGMENTS } from '../customers.models';
+import { type Customer, SEGMENTS } from '../customers.models';
 import {
   ACCOUNT_MASK,
   CREDIT_TO_VOLUME_RATIO,
@@ -60,7 +63,16 @@ export const CUSTOMERS_API = '/api/customers';
  */
 @Component({
   selector: 'app-customer-form-page',
-  imports: [FormRoot, FormField, FormFieldShell, MaskedInput, AmountInput, Icon, RouterLink],
+  imports: [
+    FormRoot,
+    FormField,
+    FormFieldShell,
+    MaskedInput,
+    AmountInput,
+    Icon,
+    RouterLink,
+    TranslatePipe,
+  ],
   templateUrl: './customer-form-page.html',
 })
 export class CustomerFormPage implements HasUnsavedChanges {
@@ -69,10 +81,14 @@ export class CustomerFormPage implements HasUnsavedChanges {
   private readonly toasts = inject(ToastService);
   private readonly injector = inject(Injector);
   private readonly document = inject(DOCUMENT);
+  private readonly i18n = inject(I18n);
 
   /** Route param (withComponentInputBinding); absent when creating. */
   readonly id = input<string>();
   protected readonly isEdit = computed(() => this.id() !== undefined);
+  protected readonly title = computed<MessageKey>(() =>
+    this.isEdit() ? 'pages.editCustomer' : 'pages.newCustomer',
+  );
 
   private readonly detailsResource = httpResource<CustomerDetails>(() => {
     const id = this.id();
@@ -97,6 +113,7 @@ export class CustomerFormPage implements HasUnsavedChanges {
     customerFormSchema({
       customerId: () => this.id(),
       originalLegalName: () => this.details()?.legalName,
+      t: this.i18n.t,
     }),
     {
       name: 'customer',
@@ -107,14 +124,12 @@ export class CustomerFormPage implements HasUnsavedChanges {
     },
   );
 
-  protected readonly segmentOptions = SEGMENTS.map((value) => ({
-    value,
-    label: SEGMENT_LABELS[value],
-  }));
-  protected readonly countryOptions = CUSTOMER_COUNTRIES.map((value) => ({
-    value,
-    label: countryName(value),
-  }));
+  protected readonly segmentOptions = computed(() =>
+    SEGMENTS.map((value) => ({ value, label: this.i18n.t(`customers.segments.${value}`) })),
+  );
+  protected readonly countryOptions = computed(() =>
+    CUSTOMER_COUNTRIES.map((value) => ({ value, label: countryName(value) })),
+  );
   protected readonly ibanMask = IBAN_MASK;
   protected readonly routingMask = ROUTING_MASK;
   protected readonly accountMask = ACCOUNT_MASK;
@@ -124,22 +139,34 @@ export class CustomerFormPage implements HasUnsavedChanges {
     const country = this.model().company.country;
     return country === '' ? null : TAX_ID_RULES[country];
   });
+  protected readonly taxIdLabel = computed(() => {
+    const country = this.model().company.country;
+    return this.i18n.t(country ? `customerForm.taxIds.${country}` : 'customerForm.taxId');
+  });
   protected readonly taxIdMask = computed(() => this.taxIdRule()?.mask ?? EMPTY_MASK);
   protected readonly taxIdHint = computed(() => {
     const rule = this.taxIdRule();
-    return rule ? `For example ${rule.example}.` : 'Choose a country first.';
+    return rule
+      ? this.i18n.t('customerForm.example', { example: rule.example })
+      : this.i18n.t('customerForm.chooseCountryFirst');
   });
   protected readonly ibanHint = computed(() => {
     const country = this.model().company.country;
     const example = country === '' || country === 'US' ? IBAN_EXAMPLES.GB : IBAN_EXAMPLES[country];
-    return `For example ${IBAN_MASK.format(example)}.`;
+    return this.i18n.t('customerForm.example', { example: IBAN_MASK.format(example) });
   });
-  protected readonly volumeHint = `At least ${formatFull(MIN_MONTHLY_VOLUME, 'currency')}.`;
+  protected readonly volumeHint = computed(() =>
+    this.i18n.t('customerForm.volumeHint', { amount: formatFull(MIN_MONTHLY_VOLUME, 'currency') }),
+  );
   protected readonly creditHint = computed(() => {
     const volume = this.model().banking.monthlyVolume;
+    const ratio = CREDIT_TO_VOLUME_RATIO;
     return volume
-      ? `Up to ${formatFull(volume * CREDIT_TO_VOLUME_RATIO, 'currency')} (${CREDIT_TO_VOLUME_RATIO}× monthly volume).`
-      : `Up to ${CREDIT_TO_VOLUME_RATIO}× the monthly volume.`;
+      ? this.i18n.t('customerForm.creditHint', {
+          amount: formatFull(volume * ratio, 'currency'),
+          ratio,
+        })
+      : this.i18n.t('customerForm.creditHintEmpty', { ratio });
   });
 
   /** Shown after a failed submit attempt; disappears as soon as every error is fixed. */
@@ -156,7 +183,7 @@ export class CustomerFormPage implements HasUnsavedChanges {
     viewChild<ElementRef<HTMLButtonElement>>('addSignatoryButton');
 
   /** Unexpected server failure, shown inline above the actions. */
-  protected readonly serverError = signal<string | null>(null);
+  protected readonly serverError = signal<MessageKey | null>(null);
   private saved = false;
 
   hasUnsavedChanges(): boolean {
@@ -192,11 +219,13 @@ export class CustomerFormPage implements HasUnsavedChanges {
   }
 
   private describeError(error: ValidationError.WithFieldTree): string {
-    const message = error.message ?? 'Enter a valid value.';
+    const message = error.message ?? this.i18n.t('common.invalidValue');
     const index = [...this.customerForm.signatories].findIndex(
       (s) => s.name === error.fieldTree || s.email === error.fieldTree,
     );
-    return index === -1 ? message : `Signatory ${index + 1}: ${message}`;
+    return index === -1
+      ? message
+      : this.i18n.t('customerForm.signatoryError', { n: index + 1, message });
   }
 
   private revealErrorSummary(): void {
@@ -217,27 +246,28 @@ export class CustomerFormPage implements HasUnsavedChanges {
       this.saved = true;
       this.toasts.show({
         tone: 'success',
-        message: id
-          ? `${customer.name} was updated.`
-          : `${customer.name} was created and is now in onboarding.`,
+        message: this.i18n.t(id ? 'customerForm.updated' : 'customerForm.created', {
+          name: customer.name,
+        }),
       });
       await this.router.navigate(['/customers'], { queryParams: { q: customer.id } });
       return null;
     } catch (error) {
       if (!(error instanceof HttpErrorResponse)) throw error;
 
-      const legalNameError = (error.error as FieldErrorsResponse | null)?.fieldErrors?.legalName;
-      if (error.status === 409 && legalNameError) {
+      // The server flags the field; the wording is ours, in the user's language.
+      const nameConflict = (error.error as FieldErrorsResponse | null)?.fieldErrors?.legalName;
+      if (error.status === 409 && nameConflict) {
         this.revealErrorSummary();
         return {
           kind: 'server',
-          message: legalNameError,
+          message: this.i18n.t('customerForm.errors.nameTaken'),
           fieldTree: this.customerForm.company.legalName,
         };
       }
       // Network (0) and permission (403) failures are already announced by a global toast.
       if (error.status !== 0 && error.status !== 403) {
-        this.serverError.set("We couldn't save the customer. Please try again.");
+        this.serverError.set('customerForm.saveError');
       }
       return null;
     }
