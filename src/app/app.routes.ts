@@ -27,8 +27,8 @@ export const routes: Routes = [
         path: 'customers',
         title: 'Customers · Ledgerly',
         canActivate: [roleGuard('admin', 'analyst')],
-        data: { heading: 'Customers' },
-        loadComponent: comingSoon,
+        loadComponent: () =>
+          import('./features/customers/customers-page').then((m) => m.CustomersPage),
       },
       {
         path: 'transactions',

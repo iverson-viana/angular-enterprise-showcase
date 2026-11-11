@@ -1,0 +1,222 @@
+@let q = query();
+
+<header>
+  <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">Customers</h1>
+  <p class="mt-1 text-slate-600 dark:text-slate-300">
+    Corporate clients, their risk rating and current balance.
+  </p>
+</header>
+
+<!-- Filters: one row above the content they scope. -->
+<form
+  role="search"
+  aria-label="Filter customers"
+  class="mt-6 flex flex-wrap items-end gap-3"
+  (submit)="$event.preventDefault()"
+>
+  <div class="w-full sm:w-72">
+    <label
+      for="customer-search"
+      class="block text-sm font-medium text-slate-700 dark:text-slate-300"
+    >
+      Search
+    </label>
+    <div class="relative mt-1">
+      <app-icon
+        name="search"
+        class="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-slate-500 dark:text-slate-400"
+      />
+      <input
+        id="customer-search"
+        type="search"
+        placeholder="Name or ID"
+        autocomplete="off"
+        [value]="searchText()"
+        (input)="onSearchInput($event)"
+        class="block w-full rounded-md border border-slate-300 bg-white py-2 pr-3 pl-8 text-sm text-slate-900 placeholder:text-slate-500 focus:border-blue-700 focus:ring-2 focus:ring-blue-700 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-400 dark:focus:border-blue-400 dark:focus:ring-blue-400"
+      />
+    </div>
+  </div>
+
+  @for (f of filters; track f.key) {
+    <div>
+      <label
+        [for]="'filter-' + f.key"
+        class="block text-sm font-medium text-slate-700 dark:text-slate-300"
+      >
+        {{ f.label }}
+      </label>
+      <select
+        [id]="'filter-' + f.key"
+        (change)="onFilterChange(f.key, $event)"
+        class="mt-1 block rounded-md border border-slate-300 bg-white py-2 pr-8 pl-3 text-sm text-slate-900 focus:border-blue-700 focus:ring-2 focus:ring-blue-700 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-400"
+      >
+        <option value="" [selected]="q[f.key] === null">All</option>
+        @for (option of f.options; track option.value) {
+          <option [value]="option.value" [selected]="q[f.key] === option.value">
+            {{ option.label }}
+          </option>
+        }
+      </select>
+    </div>
+  }
+
+  @if (hasActiveFilters()) {
+    <button
+      type="button"
+      (click)="clearFilters()"
+      class="rounded-md px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:text-blue-400 dark:hover:bg-slate-800 dark:focus-visible:ring-blue-400"
+    >
+      Clear filters
+    </button>
+  }
+</form>
+
+@if (hasError() && !result()) {
+  <div
+    role="alert"
+    class="mt-6 rounded-lg border border-red-200 bg-red-50 p-5 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
+  >
+    <p class="font-medium">We couldn't load customers.</p>
+    <button
+      type="button"
+      (click)="retry()"
+      class="mt-3 rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-800 focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:ring-offset-2 focus-visible:outline-none dark:focus-visible:ring-offset-red-950"
+    >
+      Try again
+    </button>
+  </div>
+} @else {
+  <div
+    class="mt-6 rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+  >
+    <!-- Focusable so keyboard users can scroll the table horizontally on small screens. -->
+    <div
+      tabindex="0"
+      role="region"
+      aria-labelledby="customers-caption"
+      class="overflow-x-auto rounded-t-lg transition-opacity focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none motion-reduce:transition-none dark:focus-visible:ring-blue-400"
+      [class.opacity-60]="isRefreshing()"
+      [attr.aria-busy]="isRefreshing() || !result()"
+    >
+      <table class="w-full min-w-[56rem] text-left text-sm">
+        <caption id="customers-caption" class="sr-only">
+          {{
+            caption()
+          }}
+        </caption>
+        <thead
+          class="border-b border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-300"
+        >
+          <tr>
+            <th scope="col" class="px-4 py-3 font-medium" [attr.aria-sort]="ariaSort('name')">
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 rounded font-medium hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:hover:text-white dark:focus-visible:ring-blue-400"
+                (click)="sortBy('name')"
+              >
+                Customer <app-icon [name]="sortIcon('name')" class="size-4" />
+              </button>
+            </th>
+            <th scope="col" class="px-4 py-3 font-medium">Segment</th>
+            <th scope="col" class="px-4 py-3 font-medium">Country</th>
+            <th scope="col" class="px-4 py-3 font-medium">Risk</th>
+            <th scope="col" class="px-4 py-3 font-medium">Status</th>
+            <th
+              scope="col"
+              class="px-4 py-3 text-right font-medium"
+              [attr.aria-sort]="ariaSort('balance')"
+            >
+              <button
+                type="button"
+                class="ml-auto inline-flex items-center gap-1 rounded font-medium hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:hover:text-white dark:focus-visible:ring-blue-400"
+                (click)="sortBy('balance')"
+              >
+                Balance <app-icon [name]="sortIcon('balance')" class="size-4" />
+              </button>
+            </th>
+            <th
+              scope="col"
+              class="px-4 py-3 font-medium"
+              [attr.aria-sort]="ariaSort('lastActivity')"
+            >
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 rounded font-medium hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:hover:text-white dark:focus-visible:ring-blue-400"
+                (click)="sortBy('lastActivity')"
+              >
+                Last activity <app-icon [name]="sortIcon('lastActivity')" class="size-4" />
+              </button>
+            </th>
+          </tr>
+        </thead>
+
+        <tbody
+          class="divide-y divide-slate-100 text-slate-800 dark:divide-slate-800 dark:text-slate-200"
+        >
+          @if (!result()) {
+            <!-- First load only. -->
+            @for (i of skeletonRows; track i) {
+              <tr aria-hidden="true">
+                <td colspan="7" class="px-4 py-3">
+                  <div
+                    class="h-5 rounded bg-slate-100 motion-safe:animate-pulse dark:bg-slate-800"
+                  ></div>
+                </td>
+              </tr>
+            }
+          } @else {
+            @for (c of rows(); track c.id) {
+              <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                <th scope="row" class="px-4 py-3 font-normal">
+                  <span class="block font-medium text-slate-900 dark:text-white">{{ c.name }}</span>
+                  <span class="block text-xs text-slate-600 dark:text-slate-400">{{ c.id }}</span>
+                </th>
+                <td class="px-4 py-3">{{ c.segmentLabel }}</td>
+                <td class="px-4 py-3">{{ c.countryLabel }}</td>
+                <td class="px-4 py-3">
+                  <app-badge [tone]="c.riskTone">{{ c.riskLabel }}</app-badge>
+                </td>
+                <td class="px-4 py-3">
+                  <app-badge [tone]="c.statusTone">{{ c.statusLabel }}</app-badge>
+                </td>
+                <td class="px-4 py-3 text-right tabular-nums">{{ c.balanceLabel }}</td>
+                <td class="px-4 py-3 whitespace-nowrap">{{ c.lastActivityLabel }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7" class="px-4 py-12 text-center">
+                  <p class="font-medium text-slate-900 dark:text-white">No customers found</p>
+                  <p class="mt-1 text-slate-600 dark:text-slate-300">
+                    Try a different search or remove some filters.
+                  </p>
+                  @if (hasActiveFilters()) {
+                    <button
+                      type="button"
+                      (click)="clearFilters()"
+                      class="mt-3 rounded-md px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:outline-none dark:text-blue-400 dark:hover:bg-slate-800"
+                    >
+                      Clear filters
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (result(); as page) {
+      <app-paginator
+        class="border-t border-slate-200 px-4 py-3 dark:border-slate-800"
+        [page]="page.page"
+        [pageSize]="page.pageSize"
+        [total]="page.total"
+        [pageSizes]="pageSizes"
+        (pageChange)="goToPage($event)"
+        (pageSizeChange)="setPageSize($event)"
+      />
+    }
+  </div>
+}

@@ -12,7 +12,7 @@ Public portfolio repo. Fictional app **"Ledgerly"** — B2B banking dashboard. A
 
 - Angular 22 standalone, Signals, zoneless, OnPush by default, new control flow (`@if`, `@for`, `@defer`)
 - Tailwind CSS v4 (PostCSS), Angular CDK (virtual scroll, overlays)
-- Mock API: MSW (Mock Service Worker)
+- Mock API: MSW handlers served **in-page** (`@mswjs/interceptors` FetchInterceptor + `getResponse`, see `src/mocks/mock-api.ts`) — NOT the Service Worker (`setupWorker`), which silently stops mocking after the browser terminates the idle worker. Requires `withFetch()`.
 - Tests: Vitest (unit) + Playwright (e2e)
 - ESLint (angular-eslint) + Prettier; Husky + lint-staged + commitlint
 - CI: GitHub Actions — lint → test → build → e2e → deploy (Cloudflare Pages or Vercel)

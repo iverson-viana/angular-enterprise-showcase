@@ -46,6 +46,20 @@ export function formatSignedPercent(ratio: number): string {
   return signedPercent.format(ratio);
 }
 
+const mediumDate = new Intl.DateTimeFormat(LOCALE, { dateStyle: 'medium' });
+const regionNames = new Intl.DisplayNames(LOCALE, { type: 'region' });
+
+/** ISO date (`2026-11-03`) → `Nov 3, 2026`. Parsed as a local calendar date (no TZ shift). */
+export function formatDate(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  return mediumDate.format(new Date(year, month - 1, day));
+}
+
+/** ISO 3166-1 alpha-2 → `Germany`. Falls back to the code itself. */
+export function countryName(code: string): string {
+  return regionNames.of(code) ?? code;
+}
+
 /** ISO month (`2026-03`) → `Mar` (short) or `March 2026` (long). */
 export function formatMonth(isoMonth: string, style: 'short' | 'long'): string {
   const [year, month] = isoMonth.split('-').map(Number);
