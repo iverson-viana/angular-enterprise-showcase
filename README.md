@@ -1,6 +1,6 @@
 # Ledgerly — Angular enterprise showcase
 
-[![CI](https://github.com/Iverspark/angular-enterprise-showcase/actions/workflows/ci.yml/badge.svg)](https://github.com/Iverspark/angular-enterprise-showcase/actions/workflows/ci.yml)
+[![CI](https://github.com/iverson-viana/angular-enterprise-showcase/actions/workflows/ci.yml/badge.svg)](https://github.com/iverson-viana/angular-enterprise-showcase/actions/workflows/ci.yml)
 ![Angular 22](https://img.shields.io/badge/Angular-22-dd0031)
 ![Coverage 90%](https://img.shields.io/badge/coverage-90%25-brightgreen)
 ![WCAG 2.2 AA](<https://img.shields.io/badge/a11y-WCAG%202.2%20AA%20(axe%20in%20CI)-blue>)
@@ -135,6 +135,15 @@ runtime translation is the better trade-off:
   readers announce the real position in all 10,000 rows.
 - Error summaries take focus, and accessible names include their visible labels.
 - `axe` runs in CI on the main pages, in both themes, and on a form showing errors.
+
+## AI-assisted workflow
+
+I used an AI coding assistant (Claude Code) as a pair programmer on this project. The
+project rules it follows are versioned in [`CLAUDE.md`](CLAUDE.md): the stack, Angular
+conventions and the accessibility bar. I made the architecture decisions above, reviewed every
+change, and the same gates apply to everything that lands: format, lint, unit tests with
+coverage thresholds, a production build, and Playwright + axe end to end, all in CI before any
+deploy.
 
 ## Getting started
 
